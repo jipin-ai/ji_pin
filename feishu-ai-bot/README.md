@@ -4,6 +4,13 @@
 
 [English](README_EN.md) | 中文
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python" alt="Python"/>
+  <img src="https://img.shields.io/badge/Framework-Hermes_Agent-FF6B35" alt="Hermes Agent"/>
+  <img src="https://img.shields.io/badge/SDK-lark--oapi-3370FF?logo=feishu" alt="Feishu"/>
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/>
+</p>
+
 ---
 
 ## ✨ 功能亮点
@@ -11,7 +18,7 @@
 | 功能 | 说明 |
 |------|------|
 | 💬 **AI 智能对话** | 群内 @机器人 即问即答，支持上下文记忆 |
-| 🎨 **AI 绘图** | 自然语言描述即可生成图片 |
+| 🎨 **AI 绘图** | 自然语言描述即可生成图片（KIE nano-banana-2） |
 | 📊 **群聊总结** | 自动汇总群聊关键信息 |
 | 📝 **周报生成** | 一键生成团队周报 |
 | ⏰ **定时推送** | 设定 cron 定时发送消息到群 |
@@ -41,7 +48,7 @@ pip install -r requirements.txt
 
 ```bash
 FEISHU_APP_ID=你的AppID
-FEISHU_APP_SECRET=你的AppSecret
+FEISHU_APP_SECRET=***
 FEISHU_CONNECTION_MODE=websocket
 ```
 
