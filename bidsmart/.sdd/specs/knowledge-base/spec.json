@@ -1,0 +1,47 @@
+{
+  "name": "knowledge-base",
+  "version": "0.7.1",
+  "phase": "completed",
+  "created": "2026-05-02T00:00:00+08:00",
+  "language": "zh",
+  "brief": "知识库模块 — BGE 向量化 + FAISS 本地语义检索 + AI 对话自动上下文注入",
+  "approvals": {
+    "requirements": true,
+    "design": true,
+    "tasks": true
+  },
+  "modules": {
+    "backend": [
+      "src/knowledge/models.py",
+      "src/knowledge/embedder.py",
+      "src/knowledge/router.py"
+    ],
+    "frontend": [
+      "static/index.html (知识库子面板)"
+    ],
+    "database": [
+      "kb_documents",
+      "kb_chunks"
+    ]
+  },
+  "dependencies": {
+    "python": ["sentence-transformers", "faiss-cpu", "numpy"],
+    "models": ["BAAI/bge-small-zh-v1.5"],
+    "internal": ["src/parsing", "src/db"]
+  },
+  "features": [
+    "文档上传自动分块向量化",
+    "BGE 语义检索 (top_k)",
+    "AI 对话自动知识库上下文注入",
+    "文档列表/详情/删除管理",
+    "多来源类型标记 (manual/law/regulation/experience)",
+    "FAISS IndexFlatIP 精确搜索"
+  ],
+  "performance": {
+    "chunk_size": 500,
+    "overlap": 50,
+    "vector_dimension": 512,
+    "model_memory": "~1GB",
+    "search_latency_target": "<500ms"
+  }
+}
