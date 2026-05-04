@@ -116,6 +116,19 @@ class PdfParser(BaseParser):
             sections.append(current_section)
 
         doc.close()
+
+        # ── Image extraction and recognition ──────────────────────────────────
+        try:
+            from src.parsing.image_extractor import ImageExtractor
+            from src.config import Settings
+            settings = Settings()
+            if settings.image_recognition_enabled:
+                _, desc = await ImageExtractor.extract_and_describe(file_path, "pdf")
+                if desc and sections:
+                    sections[-1].content += desc
+        except ImportError:
+            pass  # image_extractor not available, skip
+
         return ParsedDocument(
             title=title or file_path.stem,
             sections=sections,

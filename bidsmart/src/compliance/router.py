@@ -13,6 +13,7 @@ from src.models.user import User
 from src.models.document import Document
 from src.compliance.ai_reviewer import review_compliance
 from src.compliance.pipeline import run_pipeline
+from src.compliance.tender_analyzer import analyze_tender, _generate_report
 from src.parsing import parse_document
 from src.config import Settings
 from src.knowledge.embedder import embedder
@@ -457,3 +458,136 @@ async def list_ignored(
     )
     rows = r.fetchall()
     return [dict(row._mapping) for row in rows]
+
+
+# ── Review Memory (cross-project ignore/long-term memory) ──────────────
+
+
+class MemoryIgnoreRequest(BaseModel):
+    requirement: str
+    verdict: str
+    reason: str = ""
+    suggestion: str = ""
+    project_id: int = 0
+
+
+@router.post("/memory/ignore")
+async def memory_ignore(
+    req: MemoryIgnoreRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Save a review conclusion to cross-project memory."""
+    from src.models.review_memory import ReviewMemory
+    from sqlalchemy import text as sa_text
+
+    req_hash = ReviewMemory.hash_requirement(req.requirement)
+    preview = req.requirement[:200]
+
+    await db.execute(
+        sa_text("""
+            INSERT INTO review_memory (requirement_hash, requirement_preview, verdict, reason, suggestion, project_id)
+            VALUES (:h, :p, :v, :r, :s, :pid)
+            ON CONFLICT(requirement_hash) DO UPDATE SET
+                ignore_count = review_memory.ignore_count + 1,
+                ignored_at = CURRENT_TIMESTAMP
+        """),
+        {"h": req_hash, "p": preview, "v": req.verdict, "r": req.reason, "s": req.suggestion, "pid": req.project_id or None},
+    )
+    await db.commit()
+    return {"status": "ok", "hash": req_hash}
+
+
+@router.get("/memory/list")
+async def memory_list(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all cached review memory entries."""
+    from sqlalchemy import text as sa_text
+    r = await db.execute(
+        sa_text("SELECT id, requirement_preview, verdict, reason, ignore_count, ignored_at FROM review_memory ORDER BY ignored_at DESC LIMIT 100")
+    )
+    return [dict(row._mapping) for row in r.fetchall()]
+
+
+@router.delete("/memory/{memory_id}")
+async def memory_delete(
+    memory_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a review memory entry."""
+    from sqlalchemy import text as sa_text
+    await db.execute(sa_text("DELETE FROM review_memory WHERE id = :id"), {"id": memory_id})
+    await db.commit()
+    return {"status": "ok", "deleted": memory_id}
+
+
+# ── Tender Analysis ────────────────────────────────────────────────────
+
+
+class TenderAnalyzeRequest(BaseModel):
+    """Request body for tender analysis endpoint."""
+    tender_doc_id: int
+
+
+@router.post("/analyze-tender")
+async def analyze_tender_endpoint(
+    req: TenderAnalyzeRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """标前招标分析：提取所有要求并按废标/重要/一般三层分类。
+
+    - 输入已上传的招标文件 ID
+    - 返回三层分类结果 + Markdown 报告
+    - 响应时间 ≤ 60 秒
+    """
+    settings = Settings()
+
+    # Load document
+    result = await db.execute(
+        select(Document).where(Document.id == req.tender_doc_id, Document.uploaded_by == user.id)
+    )
+    doc = result.scalar_one_or_none()
+    if doc is None:
+        raise HTTPException(status_code=404, detail="文档不存在或无权访问")
+
+    # Parse
+    import os
+    file_path = os.path.join(settings.storage_root, doc.storage_path) if doc.storage_path else ""
+    if not file_path or not os.path.exists(str(file_path)):
+        raise HTTPException(status_code=400, detail="文档文件不存在")
+
+    try:
+        parsed = await parse_document(Path(file_path))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"文档解析失败: {e}")
+
+    if not parsed.text:
+        raise HTTPException(status_code=400, detail="招标文件内容为空")
+
+    # Analyze
+    analysis = await analyze_tender(parsed.text, settings)
+
+    # Generate report
+    report_md = _generate_report(analysis)
+
+    return {
+        "disqualification": [
+            {"text": i.text, "reason": i.reason, "section": i.section, "risk": i.risk}
+            for i in analysis.disqualification
+        ],
+        "important": [
+            {"text": i.text, "reason": i.reason, "section": i.section, "risk": i.risk}
+            for i in analysis.important
+        ],
+        "general": [
+            {"text": i.text, "reason": i.reason, "section": i.section, "risk": i.risk}
+            for i in analysis.general
+        ],
+        "summary": analysis.summary,
+        "total_count": analysis.total_count,
+        "report_markdown": report_md,
+    }

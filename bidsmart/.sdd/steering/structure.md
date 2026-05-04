@@ -1,100 +1,61 @@
-# 标书智审 BidSmart — 架构
+# Architecture
 
 ## 模块地图
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                    static/index.html                              │
-│                   (SPA 前端, 2058行)                               │
-├──────────────────────────────────────────────────────────────────┤
-│                     FastAPI 路由层                                 │
-│  /auth/*  │  /projects/*  │  /documents/*  │  /ai/*  │ /admin/* │
-├───────────┼───────────────┼────────────────┼─────────┼──────────┤
-│  auth     │  projects     │  documents     │compliance│  admin   │
-│  service  │  service      │  service       │pipeline  │  router  │
-│           │               │                │          │  export  │
-├───────────┴───────────────┴────────────────┴─────────┼──────────┤
-│                    知识库 (knowledge/)                │          │
-│  embedder (BGE)  │  router (/admin/kb/*)  │  models  │          │
-├──────────────────────────────────────────────────────┴──────────┤
-│                    安全模块 (security/)                           │
-│  encryption │ audit │ keys │ signing │ desensitize │ https       │
-├──────────────────────────────────────────────────────────────────┤
-│                    ORM 模型层 (SQLAlchemy)                        │
-│  User │ Project │ Document │ ReviewSession │ AuditLog │         │
-│  KBDocument │ KBChunk                                            │
-├──────────────────────────────────────────────────────────────────┤
-│             存储层 (StorageBackend 抽象)                           │
-│  LocalFileStorage │ EncryptedStorageBackend (可选)                │
-├──────────────────────────────────────────────────────────────────┤
-│                     SQLite (bidsmart.db)                          │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-## 知识库管线 (BGE → FAISS)
-
-```
-文档上传 → python-docx/pymupdf 解析 → chunk_text (500字符/块, 50字符重叠)
-    → BAAI/bge-small-zh-v1.5 嵌入 (sentence-transformers)
-    → KBChunk 存储 (embedding_json 列)
-    → 搜索: numpy dot-product 余弦相似度 → Top-K 结果
-    → [P2] 计划迁移至 FAISS 索引以支持大规模检索
+src/
+├── main.py              # FastAPI app 工厂, 路由注册, 版本号
+├── config.py            # pydantic-settings (DeepSeek/DB/存储/压缩)
+├── db/                  # 数据库 session + 模型
+├── models/              # SQLAlchemy 模型 (User/Document/Project)
+├── compliance/
+│   ├── pipeline.py      # 🔴 核心: 4-stage 审查管线 (extract→match→review→aggregate)
+│   ├── ai_reviewer.py   # 旧版: 单次 LLM 审查 (向后兼容)
+│   ├── agent_loop.py    # Agent ReAct 循环 (工具调用+压缩)
+│   ├── agent_router.py  # Agent 模式路由
+│   ├── agent_tools.py   # Agent 工具 (load_skill/read_chunk/search_kb)
+│   ├── compression_engine.py  # 五层压缩引擎
+│   └── router.py        # /ai/* 路由 (review/review-file/review-agent)
+├── parsing/
+│   ├── chunker.py       # 文档分块器 (100MB→6K chunks)
+│   ├── pdf_parser.py    # PDF 解析
+│   ├── docx_parser.py   # DOCX 解析
+│   └── models.py        # ParsedDocument/Section 数据模型
+├── knowledge/
+│   ├── embedder.py      # BGE Embedder (bge-small-zh-v1.5, 512维)
+│   └── router.py        # /kb/* 路由 (知识库管理)
+├── skills/              # 法规 SKILL.md (招投标法/政府采购法 ×4)
+└── static/
+    └── index.html       # 单文件前端 SPA
 ```
 
 ## 目录布局
 
 ```
-src/
-├── main.py             # App工厂: 中间件→路由→静态文件挂载
-├── config.py           # pydantic-settings, 环境变量
-├── dependencies.py     # get_current_user, require_role
-├── db/                 # 数据库 (base, session, migrations)
-├── models/             # ORM 模型 (User, Project, Document, ReviewSession, AuditLog)
-├── platform/           # 业务逻辑
-│   ├── auth/           # 认证服务 (register, login, refresh, me)
-│   ├── projects/       # 项目管理 CRUD
-│   ├── documents/      # 文档上传/下载/管理
-│   ├── admin/          # 管理后台
-│   │   ├── router.py       # 管理 API 端点
-│   │   ├── user_router.py  # 用户管理
-│   │   └── export.py       # 数据导出
-│   └── middleware/     # 限流, 访问日志
-├── compliance/         # AI审查管线
-├── parsing/            # 文档解析 (docx, pdf)
-├── knowledge/          # 智能知识库 (v0.7.1+)
-│   ├── embedder.py     # 文本分块 + BGE 嵌入引擎
-│   ├── models.py       # KBDocument, KBChunk ORM 模型
-│   └── router.py       # 知识库 API (/admin/kb/*)
-├── storage/            # 文件存储抽象 + 本地/加密实现
-└── security/           # 企业级安全 (v0.7.0+)
-    ├── encryption.py   # AES-256-GCM + KEK/DEK 密钥分层
-    ├── audit.py        # 结构化审计日志, 异步批量写入
-    ├── keys.py         # KEK/DEK 密钥管理
-    ├── signing.py      # 数据签名验证
-    ├── desensitize.py  # 日志/响应数据脱敏
-    └── https.py        # HTTPS 强制中间件
+/root/bidsmart/
+├── src/                 # 源码
+├── static/              # 前端
+├── storage/             # 上传文件 + 知识库文档
+├── .sdd/                # SDD 工作流
+├── bidsmart.db          # SQLite 数据库
+├── pyproject.toml       # 依赖 + 版本
+└── .env                 # DeepSeek API key
 ```
 
-## 跨模块关注点
+## 数据流（审查管线）
 
-- **认证**: `dependencies.get_current_user` 是所有 protected endpoint 的统一入口
-- **RBAC**: 全局角色 (admin/reviewer/viewer) + 项目级成员 (ProjectMember, 模型已有但未接入服务 — P2)
-- **审计**: AuditMiddleware 自动记录所有 HTTP 请求
-- **限流**: RateLimiterMiddleware，按 IP 滑动窗口
-- **脱敏**: 敏感字段 (手机号、邮箱、身份证) 在日志和低权限响应中自动脱敏
+```
+POST /ai/review-file/stream
+  → 加载文档 (DB → parse_document)
+  → Stage 1: extract_requirements (招标文件 → 条款列表)
+  → Stage 2: match_sections (条款 → 投标段落匹配) 🔴 当前瓶颈
+  → Stage 3: review_item (逐条 LLM 审查，batch=3)
+  → Stage 4: aggregate (汇总报告)
+  → SSE push 到前端逐条渲染
+```
 
 ## 集成点
 
-- **DeepSeek API**: `AsyncOpenAI` 客户端，通过 `config.deepseek_*` 配置
-- **BGE 嵌入**: `sentence-transformers` 加载 `BAAI/bge-small-zh-v1.5`，首次运行自动下载
-- **文件存储**: `LocalFileStorage`，路径 `{storage_root}/{project_id}/{uuid}.ext`
-- **前端**: 单文件挂载在 `/`，API 调用同源
-- **管理后台**: `/admin` 路由组，需 admin 角色
-
-## 边界规则
-
-- 路由层只做参数解析和依赖注入，业务逻辑在 service 层
-- 所有 DB 操作通过 `get_db` 依赖注入 AsyncSession
-- 文件上传不进入版本控制（storage/ 在 .gitignore）
-- 测试文件放在 `tests/`，测试存储用 `test-storage/`
-- 知识库文档存储在 `storage/knowledge/`
+- `src/compliance/pipeline.match_sections()` — 待改造的核心集成点
+- `src/knowledge/embedder.Embedder` — 已可用，未接入 pipeline
+- 前端 `buildCompareTable()` → SSE `appendCompareRow()` → `finalizeCompareTable()`

@@ -40,14 +40,19 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        """Startup / shutdown lifecycle (placeholder for now)."""
-        # Startup: init DB pool, load models, etc.
+        """Startup / shutdown lifecycle."""
+        # Startup: ensure review_memory table exists
+        try:
+            from src.compliance.router import _ensure_review_memory_table
+            await _ensure_review_memory_table()
+        except Exception:
+            pass
         yield
         # Shutdown: close connections, etc.
 
     app = FastAPI(
         title="标书智审 BidSmart Agent",
-        version="0.7.8",
+        version="1.1.1",
         lifespan=lifespan,
     )
 
@@ -102,7 +107,9 @@ def create_app() -> FastAPI:
 
     # ── AI Compliance Review ──────────────────────────────────────────────
     from src.compliance.router import router as compliance_router
+    from src.compliance.agent_router import router as agent_router
     app.include_router(compliance_router)
+    app.include_router(agent_router)
 
     # ── Static Frontend ───────────────────────────────────────────────────
     from fastapi.staticfiles import StaticFiles

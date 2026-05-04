@@ -1,0 +1,1 @@
+{"name":"architecture-v1","version":"1.0.0","phase":"spec","parent":"review-accuracy","depends_on":["semantic-matching","image-extraction"]}

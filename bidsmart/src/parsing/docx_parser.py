@@ -152,6 +152,20 @@ class DocxParser(BaseParser):
             if sections:
                 sections[-1].tables.append(tbl)
 
+        # ── Image extraction ──────────────────────────────────────────────────
+        try:
+            from src.parsing.image_extractor import ImageExtractor
+            from src.config import Settings
+            settings = Settings()
+            if settings.image_recognition_enabled:
+                image_count = ImageExtractor._image_count(file_path)
+                if image_count > 0:
+                    _, desc = await ImageExtractor.extract_and_describe(file_path, "docx")
+                    if desc and sections:
+                        sections[-1].content += desc
+        except ImportError:
+            pass  # image_extractor not available, skip
+
         return ParsedDocument(
             title=title or file_path.stem,
             sections=sections,

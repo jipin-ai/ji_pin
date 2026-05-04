@@ -1,59 +1,35 @@
-# 标书智审 BidSmart — 技术栈
+# Technology Stack
 
-## 语言和框架
-- **语言**: Python 3.11+
-- **Web框架**: FastAPI 0.115+ (async)
-- **ASGI服务器**: Uvicorn 0.34+
-- **ORM**: SQLAlchemy 2.0+ (async, aiosqlite)
-- **数据库**: SQLite (开发阶段，P2 迁移到 PostgreSQL)
-- **迁移**: Alembic 1.14+
+## 语言与框架
+
+- **Backend**: Python 3.11+, FastAPI (uvicorn 服务)
+- **Frontend**: 纯 HTML/CSS/JS 单文件 (`static/index.html`)
+- **数据库**: SQLite (单文件 `bidsmart.db`，P0)
+- **ORM**: SQLAlchemy 2.0 (async)
 
 ## AI/ML
-- **核心引擎**: DeepSeek API (`deepseek-chat` 模型)
-- **SDK**: `openai` Python SDK (AsyncOpenAI, 兼容 DeepSeek API)
-- **文档解析**: python-docx (.docx), pymupdf/fitz (.pdf)
-- **知识库嵌入**: sentence-transformers (BAAI/bge-small-zh-v1.5), numpy
-- **向量检索**: numpy dot-product 余弦相似度 (计划迁移 FAISS)
 
-## 安全
-- **认证**: JWT (HS256), python-jose 3.3+
-- **密码哈希**: bcrypt 4.2+, passlib 1.7+
-- **加密**: AES-256-GCM (cryptography), KEK/DEK 分层密钥管理
-- **审计**: 结构化JSON审计日志，异步批量写入
-- **数据脱敏**: 日志/响应自动脱敏 (desensitize)
-- **传输安全**: HTTPS 强制 (https 中间件)
+- **LLM**: DeepSeek API (`deepseek-chat` model)
+- **Embedding**: BAAI/bge-small-zh-v1.5 (512维, sentence-transformers)
+- **压缩引擎**: 五层渐进式压缩 (L1-L5), token 阈值 40000
 
-## 前端
-- **技术**: 纯 HTML/CSS/JS（单文件 SPA, 2058 行）
-- **UI风格**: Anthropic 暖色羊皮纸风格 (#f5f4ed 主背景 + #c96442 accent)
-- **通信**: Fetch API + Bearer Token
+## 基础设施
 
-## 部署
-- **服务器**: 阿里云 ECS (Alibaba Cloud Linux)
-- **进程管理**: systemd (`bidsmart.service`), Restart=always
-- **端口**: 39001（安全组放行范围 39000-40000）
-- **启动命令**: `uvicorn src.main:create_app --host 0.0.0.0 --port 39001 --factory`
-- **存储**: 本地文件系统 (`./storage/{project_id}/`)
-- **Python 环境**: `/opt/hermes/.venv`
-
-## 依赖补充 (requirements.txt 未显式列出但生产依赖)
-| 包名 | 用途 |
-|------|------|
-| `sentence-transformers` | BGE 模型加载与嵌入生成 |
-| `aiosqlite` | SQLAlchemy 异步 SQLite 驱动 |
-| `passlib` | 密码哈希抽象层 (bcrypt 后端) |
-| `numpy` | 嵌入向量计算与相似度搜索 |
-| `BAAI/bge-small-zh-v1.5` | 中文嵌入模型 (HuggingFace, 首次运行时自动下载) |
+- **服务器**: 阿里云 ECS 新加坡 (8.219.137.176, 4G RAM)
+- **部署**: `uvicorn` 直启（不限并发，单 worker）
+- **uvicorn 路径**: `/opt/hermes/.venv/bin/uvicorn`
+- **消息平台**: Feishu/Lark WebSocket
 
 ## 约束
-- 国产化优先：DeepSeek 替代 OpenAI，BGE 替代 OpenAI Embeddings，本地存储替代云存储
-- 不支持 WebSocket，优先 SSE/轮询 (P2 计划引入 WebSocket)
-- 单进程部署，无容器化（当前阶段）
-- 配置文件通过 `.env` 管理，不硬编码密钥
+
+- 4G RAM 限制 — 大模型（如 BGE-M3 2GB+）需评估内存
+- 新加坡 ECS 无 GFW，但 DeepSeek API 需直连
+- 前端单文件 — 所有前端代码在 `static/index.html`，修改后需验证 JS 语法
+- 标书=商业机密 — 不存储原始文档到外部服务，本地解析
 
 ## 约定
-- 所有 API 返回 JSON，文件下载除外
-- 认证统一走 Bearer Token（Authorization header）
-- 数据库操作全部异步（async SQLAlchemy + aiosqlite）
-- 文件上传不分块（当前），通过配置 `max_upload_size_mb` 控制
-- 测试: pytest + httpx，测试存储目录独立于生产
+
+- 版本号: `src/main.py` + `pyproject.toml` 双写同步
+- 所有改动走 SDD 工作流（discovery→steering→spec→impl）
+- 布局/架构级变更 → 大版本号 (x.0)，小改/bug → 小版本号 (0.x)
+- 前端 JS 陷阱: 修改后必须 `grep -n 'async async\|function function\|await await' static/index.html`

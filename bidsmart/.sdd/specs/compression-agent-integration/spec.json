@@ -1,0 +1,11 @@
+{
+  "name": "compression-agent-integration",
+  "phase": "tasks",
+  "created": "2026-05-02T21:45:00+08:00",
+  "language": "zh",
+  "approvals": {
+    "requirements": true,
+    "design": true,
+    "tasks": true
+  }
+}

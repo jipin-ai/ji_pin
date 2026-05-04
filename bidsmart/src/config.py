@@ -38,3 +38,22 @@ class Settings(BaseSettings):
     deepseek_api_key: str = ""
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_model: str = "deepseek-chat"
+
+    # ── Matching ─────────────────────────────────────────────────────────
+    semantic_match_threshold: float = 0.2       # cosine similarity floor for semantic matching
+
+    # ── Image Recognition ──────────────────────────────────────────────────
+    image_recognition_enabled: bool = True       # enable DeepSeek Vision for image OCR
+    image_recognition_batch_size: int = 5        # images per concurrent batch
+    image_recognition_timeout: int = 120          # total timeout seconds for all images
+
+    # ── Compression Engine (100MB+ bid document tuning) ───────────────────
+    compression_token_threshold: int = 40000      # L3 trigger threshold
+    compression_tail_budget: int = 30000          # Tail message token budget
+    compression_keep_recent: int = 5              # L1 preserve count
+    compression_collapse_text_min: int = 5000     # L2 min text size
+    compression_collapse_head: int = 1500         # L2 head chars
+    compression_collapse_tail: int = 1000         # L2 tail chars
+    compression_max_iterations: int = 30          # Agent loop limit
+    compression_chunk_size: int = 2000            # Doc chunk tokens
+    compression_chunk_overlap: int = 50           # Chunk overlap tokens

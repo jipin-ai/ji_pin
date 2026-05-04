@@ -73,7 +73,7 @@ body{font-family:var(--font-sans);background:var(--bg-root);color:var(--text-pri
 .app-body{display:flex;flex:1;overflow:hidden}
 
 /* ── Left Panel ────────────────────────────────────── */
-.left-panel{flex:1.618;display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--border-subtle)}
+.left-panel{flex:1.618;display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--border-subtle);overflow-y:auto}
 .panel-tabs{display:flex;padding:12px 16px 0;gap:2px;flex-shrink:0}
 .panel-tab{flex:1;padding:10px 16px;text-align:center;cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;font-size:13px;font-weight:500;color:var(--text-muted);background:transparent;border:none;font-family:inherit;transition:var(--transition)}
 .panel-tab.active{color:var(--text-primary);background:var(--bg-elevated)}
@@ -456,7 +456,6 @@ body{font-family:var(--font-sans);background:var(--bg-root);color:var(--text-pri
 .compare-table tr:hover td{background:var(--bg-hover)}
 .compare-table .col-num{width:40px;text-align:center;color:var(--text-muted);font-family:var(--font-mono)}
 .compare-table .col-verdict{width:80px}
-.compare-table .col-page{width:55px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text-muted)}
 .compare-table .col-req{min-width:200px}
 .compare-table .col-bid{min-width:200px}
 .compare-table .col-note{min-width:150px}
@@ -678,6 +677,7 @@ body{font-family:var(--font-sans);background:var(--bg-root);color:var(--text-pri
           <div id="fileDocMeta" class="hidden" style="margin-bottom:16px;padding:12px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius);font-size:13px;color:var(--text-secondary)"></div>
           <div class="review-actions">
             <button class="btn-review" id="fileReviewBtn" onclick="startFileReview()" disabled>📊 选择文件后开始审查</button>
+            <button class="btn-review" id="tenderAnalysisBtn" onclick="startTenderAnalysis()" disabled style="background:var(--accent);margin-top:8px">📋 标前分析 — 三层分类</button>
           </div>
           <div id="fileStreamBox" class="stream-indicator hidden"></div>
           <div id="fileResultSection" class="result-section"></div>
@@ -953,9 +953,8 @@ async function login(){
       .then(r=>r.json())
       .then(d=>{
         currentUserRole = d.role;
-        if(d.role === 'admin'){
-          document.getElementById('adminTabBtn').style.display = '';
-        }
+        const ab = document.getElementById('adminTabBtn');
+        ab.style.display = d.role === 'admin' ? '' : 'none';
       }).catch(()=>{});
     document.getElementById('loginPage').classList.add('hidden');
     document.getElementById('appPage').classList.remove('hidden');
@@ -986,9 +985,8 @@ async function submitChangePassword(){
       .then(r=>r.json())
       .then(d=>{
         currentUserRole = d.role;
-        if(d.role === 'admin'){
-          document.getElementById('adminTabBtn').style.display = '';
-        }
+        const ab = document.getElementById('adminTabBtn');
+        ab.style.display = d.role === 'admin' ? '' : 'none';
       }).catch(()=>{});
     loadProjects();
   }catch(e){err.textContent='网络错误: '+e.message;err.style.display='block'}
@@ -1013,7 +1011,10 @@ function switchPanel(name){
   document.getElementById('fileReviewPanel').classList.toggle('hidden', name !== 'fileReview');
   document.getElementById('comparePanel').classList.toggle('hidden', name !== 'compare');
   document.getElementById('adminPanel').classList.toggle('hidden', name !== 'admin');
-  if(name === 'admin'){ switchAdminSub('users'); loadAdminUsers(); }
+  if(name === 'admin'){
+    if(currentUserRole !== 'admin'){ alert('仅管理员可访问'); return; }
+    switchAdminSub('users'); loadAdminUsers();
+  }
   if(name === 'project') loadProjects();
   if(name === 'fileReview'){
     updateProjectContexts();
@@ -1275,6 +1276,9 @@ function onDocSelect(){
   const tenderChecks = document.querySelectorAll('.tender-check:checked');
   const bidChecks = document.querySelectorAll('.bid-check:checked');
   const btn = document.getElementById('fileReviewBtn');
+  const analysisBtn = document.getElementById('tenderAnalysisBtn');
+
+  // File review: needs both tender + bid
   if(tenderChecks.length > 0 && bidChecks.length > 0){
     btn.disabled = false;
     btn.textContent = `🤖 AI 审查 (${tenderChecks.length}个招标 + ${bidChecks.length}个投标)`;
@@ -1282,6 +1286,15 @@ function onDocSelect(){
     btn.disabled = true;
     btn.textContent = '📊 选择文件后开始审查';
     document.getElementById('fileDocMeta').classList.add('hidden');
+  }
+
+  // Tender analysis: only needs tender
+  if(tenderChecks.length > 0){
+    analysisBtn.disabled = false;
+    analysisBtn.textContent = `📋 标前分析 (${tenderChecks.length}个招标文件)`;
+  } else {
+    analysisBtn.disabled = true;
+    analysisBtn.textContent = '📋 标前分析 — 三层分类';
   }
 }
 
@@ -1376,6 +1389,113 @@ async function startFileReview(){
   }
 }
 
+/* ── Tender Analysis ──────────────────────────────── */
+
+async function startTenderAnalysis(){
+  const tenderChecks = document.querySelectorAll('.tender-check:checked');
+  if(tenderChecks.length === 0) return;
+  const tenderId = parseInt(tenderChecks[0].value);
+
+  const btn = document.getElementById('tenderAnalysisBtn');
+  const resultSection = document.getElementById('fileResultSection');
+  const stream = document.getElementById('fileStreamBox');
+
+  btn.disabled = true; btn.textContent = '⏳ 分析中...';
+  stream.classList.remove('hidden');
+  stream.innerHTML = '<span class="dot"></span> AI 正在分析招标文件...';
+  resultSection.innerHTML = '';
+
+  try {
+    const r = await fetch('/ai/analyze-tender',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({tender_doc_id:tenderId})
+    });
+
+    if(!r.ok){
+      const err = await r.text();
+      stream.innerHTML = '<span style="color:var(--danger)">❌ '+err+'</span>';
+      btn.disabled = false; btn.textContent = '📋 标前分析 — 三层分类';
+      return;
+    }
+
+    const data = await r.json();
+    stream.classList.add('hidden');
+
+    let html = `<div class="result-card">
+      <div class="score-big" style="font-size:24px">📋 ${data.total_count||0} 条招标要求</div>
+      <div class="score-summary">
+        <span>🔴 废标项: ${data.disqualification?.length||0}</span>
+        <span>🟡 重要: ${data.important?.length||0}</span>
+        <span>🟢 一般: ${data.general?.length||0}</span>
+      </div>
+    </div>`;
+
+    if(data.summary) html += `<div class="risk-box">📝 ${data.summary}</div>`;
+
+    if(data.disqualification?.length){
+      html += `<div class="action-section">
+        <div class="action-header">🔴 废标项 — 缺失即废标 (${data.disqualification.length}条)</div>`;
+      data.disqualification.forEach((item,i)=>{
+        html += `<div class="action-item" style="border-left:3px solid var(--danger)">
+          <div class="action-item-header">
+            <span class="action-num">#${i+1}</span>
+            <span class="tag tag-nc">🔴 废标</span>
+            <span class="action-req">${escHtml(item.text||'')}</span>
+          </div>
+          <div class="action-detail">
+            ${item.section?`<div style="color:var(--text-muted);font-size:12px">📂 ${escHtml(item.section)}</div>`:''}
+            ${item.reason?`<div class="action-reason">🔍 ${escHtml(item.reason)}</div>`:''}
+            ${item.risk?`<div class="action-suggestion" style="color:var(--danger)">⚠️ ${escHtml(item.risk)}</div>`:''}
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    if(data.important?.length){
+      html += `<div class="action-section">
+        <div class="action-header">🟡 重要条款 (${data.important.length}条)</div>`;
+      data.important.forEach((item,i)=>{
+        html += `<div class="action-item" style="border-left:3px solid var(--warn)">
+          <div class="action-item-header">
+            <span class="action-num">#${i+1}</span>
+            <span class="tag tag-partial">🟡 重要</span>
+            <span class="action-req">${escHtml(item.text||'')}</span>
+          </div>
+          <div class="action-detail">
+            ${item.section?`<div style="color:var(--text-muted);font-size:12px">📂 ${escHtml(item.section)}</div>`:''}
+            ${item.reason?`<div class="action-reason">🔍 ${escHtml(item.reason)}</div>`:''}
+            ${item.risk?`<div class="action-suggestion">⚠️ ${escHtml(item.risk)}</div>`:''}
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    if(data.general?.length){
+      html += `<div class="action-section">
+        <div class="action-header">🟢 一般条款 (${data.general.length}条)</div>`;
+      data.general.forEach((item,i)=>{
+        html += `<div class="verdict-item-compact">
+          <span class="tag tag-compliant">🟢 一般</span>
+          <span style="font-size:13px">${escHtml(item.text||'')}</span>
+          ${item.section?`<div style="color:var(--text-muted);font-size:12px;margin-left:60px">📂 ${escHtml(item.section)}</div>`:''}
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    resultSection.innerHTML = html;
+    btn.disabled = false; btn.textContent = '📋 标前分析 — 三层分类';
+
+  }catch(e){
+    stream.innerHTML = '<span style="color:var(--danger)">❌ 网络错误: '+e.message+'</span>';
+    btn.disabled = false; btn.textContent = '📋 标前分析 — 三层分类';
+  }
+}
+
+
 
 
 /* ── Streaming Compare Table ──────────────────────── */
@@ -1395,9 +1515,7 @@ function initCompareTable(){
         <th class="col-verdict">判定</th>
         <th>权重</th>
         <th class="col-req">招标文件要求</th>
-        <th class="col-page">页码</th>
         <th class="col-bid">投标文件对照内容</th>
-        <th class="col-page">页码</th>
         <th class="col-note">问题备注 / 整改建议</th>
         <th class="col-action">操作</th>
       <\/tr>
@@ -1437,13 +1555,10 @@ function appendCompareRow(item, idx){
     <td class="col-verdict">${tagLabel}<\/td>
     <td>${gradeLabel}<\/td>
     <td class="col-req">${escHtml(item.requirement||'')}<\/td>
-    <td class="col-page">${item.tender_page||'—'}<\/td>
     <td class="col-bid">${escHtml(item.bid_section_heading||'—')}<\/td>
-    <td class="col-page">${item.bid_page||'—'}<\/td>
     <td class="col-note">${escHtml(item.suggestion||item.reason||'')}<\/td>
     <td class="col-action">
       <button class="btn-confirm" onclick="confirmItem(this, '${itemId}')" title="确认已处理">✔</button>
-      <button class="btn-ignore" onclick="ignoreItem(this, '${itemId}')" title="忽略此项">✘</button>
       <button class="btn-ask" onclick="askAboutItem('${itemId}')" title="追问AI">💬</button>
     <\/td>`;
   itemDataMap[itemId] = {requirement: item.requirement||"", reason: item.reason||"", suggestion: item.suggestion||"", verdict: item.verdict||"", verdictLabel: isNC ? "不合规" : "部分合规"};

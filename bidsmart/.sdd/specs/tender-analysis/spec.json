@@ -1,0 +1,11 @@
+{
+  "name": "tender-analysis",
+  "phase": "tasks",
+  "created": "2026-05-03T12:00:00+08:00",
+  "language": "zh",
+  "approvals": {
+    "requirements": false,
+    "design": false,
+    "tasks": false
+  }
+}
