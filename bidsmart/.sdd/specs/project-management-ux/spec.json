@@ -1,0 +1,12 @@
+{
+  "name": "project-management-ux",
+  "phase": "tasks",
+  "created": "2026-04-30T10:30:00+08:00",
+  "language": "zh",
+  "brief": "重构项目管理到文件审查的完整 UX 工作流",
+  "approvals": {
+    "requirements": true,
+    "design": true,
+    "tasks": true
+  }
+}

@@ -1,0 +1,2173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>标书智审 BidSmart Agent</title>
+<style>
+
+/* ── Design Tokens ─────────────────────────────────── */
+:root {
+  --bg-root: #f5f4ed;
+  --bg-surface: #faf9f5;
+  --bg-elevated: #ffffff;
+  --bg-input: #ffffff;
+  --bg-hover: #e8e6dc;
+  --text-primary: #141413;
+  --text-secondary: #5e5d59;
+  --text-tertiary: #87867f;
+  --text-muted: #b0aea5;
+  --accent: #c96442;
+  --accent-hover: #d97757;
+  --accent-soft: rgba(201,100,66,0.12);
+  --accent-glow: rgba(201,100,66,0.2);
+  --success: #2d8a4e;
+  --success-soft: rgba(45,138,78,0.1);
+  --warn: #b85c1a;
+  --warn-soft: rgba(184,92,26,0.1);
+  --danger: #b53333;
+  --danger-soft: rgba(181,51,51,0.1);
+  --border-default: #e8e6dc;
+  --border-subtle: #f0eee6;
+  --border-active: #c96442;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+  --font-mono: "JetBrains Mono","Fira Code",monospace;
+  --font-sans: "PingFang SC","Microsoft YaHei","Inter",system-ui,sans-serif;
+  --transition: 0.2s ease;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font-sans);background:var(--bg-root);color:var(--text-primary);min-height:100vh;line-height:1.6}
+
+/* ── Login ─────────────────────────────────────────── */
+.login-page{display:flex;align-items:center;justify-content:center;min-height:100vh}
+.login-card{width:420px;padding:48px 40px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg)}
+.login-card .logo{font-size:26px;font-weight:700;margin-bottom:4px;letter-spacing:-0.5px}
+.login-card .logo span{color:var(--accent)}
+.login-card .desc{color:var(--text-muted);font-size:13px;margin-bottom:32px}
+.login-card input{width:100%;padding:12px 14px;margin-bottom:12px;background:var(--bg-input);border:1px solid var(--border-default);border-radius:var(--radius);color:var(--text-primary);font-size:14px;font-family:inherit;transition:var(--transition)}
+.login-card input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.login-card .btn{width:100%;padding:12px;background:var(--accent);border:none;border-radius:var(--radius);color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:var(--transition)}
+.login-card .btn:hover{background:#2563eb;box-shadow:0 8px 24px var(--accent-glow)}
+.pwd-wrap{position:relative;width:100%;margin-bottom:12px}
+.pwd-wrap input{margin-bottom:0;padding-right:46px}
+.pwd-toggle{z-index:1;position:absolute;right:2px;top:2px;bottom:2px;width:40px;background:transparent;border:none;border-radius:var(--radius);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);transition:var(--transition);line-height:1}
+.pwd-toggle:hover{background:var(--bg-input);color:var(--text-primary)}
+.pwd-toggle.showing{color:var(--accent)}
+.login-version{margin-top:20px;text-align:center;font-size:11px;color:var(--text-ghost);letter-spacing:0.5px}
+
+/* ── App Shell ─────────────────────────────────────── */
+.app-page{display:flex;flex-direction:column;height:100vh}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;background:var(--bg-surface);border-bottom:1px solid var(--border-subtle);flex-shrink:0}
+.app-header .brand{font-size:17px;font-weight:700;letter-spacing:-0.3px}
+.app-header .brand span{color:var(--accent)}
+.app-header .user-area{display:flex;align-items:center;gap:12px}
+.app-header .user-tag{padding:4px 12px;background:var(--accent-soft);color:var(--accent);border-radius:20px;font-size:12px;font-weight:600}
+.app-header .logout-btn{background:none;border:1px solid var(--border-default);color:var(--text-secondary);padding:6px 14px;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;transition:var(--transition);font-family:inherit}
+.app-header .logout-btn:hover{border-color:var(--danger);color:var(--danger)}
+
+.app-body{display:flex;flex:1;overflow:hidden}
+
+/* ── Left Panel ────────────────────────────────────── */
+.left-panel{flex:1.618;display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--border-subtle);overflow-y:auto}
+.panel-tabs{display:flex;padding:12px 16px 0;gap:2px;flex-shrink:0}
+.panel-tab{flex:1;padding:10px 16px;text-align:center;cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;font-size:13px;font-weight:500;color:var(--text-muted);background:transparent;border:none;font-family:inherit;transition:var(--transition)}
+.panel-tab.active{color:var(--text-primary);background:var(--bg-elevated)}
+.panel-tab:hover:not(.active){color:var(--text-secondary);background:var(--bg-hover)}
+
+/* ── Admin Sub-Tabs ────────────────────────────────── */
+.admin-sub-tab{padding:8px 16px;border-radius:6px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;font-size:13px;font-family:inherit;transition:var(--transition)}
+.admin-sub-tab.active{background:var(--accent);color:#fff}
+.admin-sub-tab:hover:not(.active):not(:disabled){background:var(--bg-hover)}
+.admin-input{padding:10px 14px;background:var(--bg-input);border:1px solid var(--border-default);border-radius:var(--radius);color:var(--text-primary);font-size:13px;font-family:inherit;transition:var(--transition)}
+.admin-input:focus{outline:none;border-color:var(--accent)}
+.table-wrap{overflow-x:auto}
+
+/* ── Knowledge Base ─────────────────────────────── */
+.kb-section{
+  background:var(--bg-elevated);
+  border:1px solid var(--border-subtle);
+  border-radius:var(--radius-lg);
+  padding:24px;
+  margin-bottom:20px
+}
+.kb-section-title{
+  font-size:15px;
+  font-weight:700;
+  color:var(--text-primary);
+  margin-bottom:16px;
+  padding-bottom:10px;
+  border-bottom:1px solid var(--border-subtle)
+}
+.kb-search-row{
+  display:flex;
+  gap:10px;
+  max-width:600px
+}
+.kb-search-input-lg{
+  flex:1;
+  padding:12px 16px;
+  background:var(--bg-input);
+  border:1px solid var(--border-default);
+  border-radius:var(--radius);
+  color:var(--text-primary);
+  font-size:14px;
+  font-family:inherit;
+  transition:var(--transition)
+}
+.kb-search-input-lg:focus{
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-soft)
+}
+.kb-search-btn-lg{
+  padding:12px 24px;
+  background:var(--accent);
+  color:#fff;
+  border:none;
+  border-radius:var(--radius);
+  cursor:pointer;
+  font-size:14px;
+  font-weight:600;
+  font-family:inherit;
+  transition:var(--transition);
+  white-space:nowrap
+}
+.kb-search-btn-lg:hover{
+  background:var(--accent-hover);
+  box-shadow:var(--shadow-lg)
+}
+.kb-search-btn-lg:active{transform:scale(0.96)}
+.kb-upload-form{max-width:700px}
+.kb-form-row{
+  display:flex;
+  gap:16px;
+  margin-bottom:14px;
+  align-items:flex-end
+}
+.kb-form-group.flex-2{flex:2}
+.kb-form-group.flex-1{flex:1}
+.kb-label{
+  display:block;
+  font-size:13px;
+  color:var(--text-secondary);
+  margin-bottom:6px;
+  font-weight:500
+}
+.kb-hint{font-size:11px;color:var(--text-muted);font-weight:400}
+.kb-input{
+  width:100%;
+  padding:10px 14px;
+  background:var(--bg-input);
+  border:1px solid var(--border-default);
+  border-radius:var(--radius);
+  color:var(--text-primary);
+  font-size:14px;
+  font-family:inherit;
+  transition:var(--transition)
+}
+.kb-input:focus,.kb-select:focus{
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-soft)
+}
+.kb-select{
+  width:100%;
+  padding:10px 14px;
+  background:var(--bg-input);
+  border:1px solid var(--border-default);
+  border-radius:var(--radius);
+  color:var(--text-primary);
+  font-size:14px;
+  font-family:inherit;
+  cursor:pointer;
+  transition:var(--transition);
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2387867f' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 12px center;
+  padding-right:32px
+}
+.kb-file-input{
+  width:100%;
+  padding:9px 12px;
+  font-size:13px;
+  color:var(--text-primary);
+  font-family:inherit;
+  border:1px solid var(--border-default);
+  border-radius:var(--radius);
+  background:var(--bg-input);
+  cursor:pointer;
+  transition:var(--transition)
+}
+.kb-file-input:hover{border-color:var(--accent)}
+.kb-file-input::file-selector-button{
+  padding:6px 14px;
+  margin-right:10px;
+  background:var(--bg-hover);
+  color:var(--text-primary);
+  border:1px solid var(--border-default);
+  border-radius:var(--radius-sm);
+  font-size:12px;
+  font-family:inherit;
+  cursor:pointer;
+  transition:var(--transition)
+}
+.kb-file-input::file-selector-button:hover{
+  background:var(--accent-soft);
+  border-color:var(--accent)
+}
+.kb-upload-btn-wrap{
+  display:flex;
+  align-items:flex-end;
+  padding-bottom:0
+}
+.kb-upload-btn{
+  width:100%;
+  padding:12px 24px;
+  background:var(--accent);
+  color:#fff;
+  border:none;
+  border-radius:var(--radius);
+  cursor:pointer;
+  font-size:14px;
+  font-weight:600;
+  font-family:inherit;
+  transition:var(--transition);
+  white-space:nowrap
+}
+.kb-upload-btn:hover{
+  background:var(--accent-hover);
+  box-shadow:var(--shadow-lg)
+}
+.kb-upload-btn:active{transform:scale(0.96)}
+.kb-status{
+  margin-top:10px;
+  font-size:13px;
+  color:var(--text-muted);
+  min-height:20px
+}
+.kb-info-box{
+  padding:20px 24px;
+  background:var(--bg-hover);
+  border:1px solid var(--border-subtle);
+  border-radius:var(--radius-lg);
+  font-size:12px;
+  color:var(--text-muted);
+  line-height:1.9
+}
+.kb-info-box strong{color:var(--text-primary)}
+.kb-info-box .step-num{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:20px;height:20px;
+  background:var(--accent);
+  color:#fff;
+  border-radius:50%;
+  font-size:11px;
+  font-weight:700;
+  margin-right:6px
+}
+
+
+/* ── Project Panel ─────────────────────────────────── */
+.project-create-form{padding:16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius);margin-bottom:20px}
+.project-create-form h3{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.project-create-form .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.project-create-form input{width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-default);border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;font-family:inherit;transition:var(--transition)}
+.project-create-form input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.project-create-form input::placeholder{color:var(--text-muted)}
+.project-create-form .btn-create{width:100%;padding:10px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:var(--transition);font-family:inherit}
+.project-create-form .btn-create:hover{background:#2563eb;box-shadow:0 6px 20px var(--accent-glow)}
+.project-create-form .btn-create:disabled{opacity:.5;cursor:not-allowed}
+
+.project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.project-card{padding:16px;background:var(--bg-surface);border:2px solid var(--border-default);border-radius:var(--radius);cursor:pointer;transition:var(--transition);position:relative;min-height:90px}
+.project-card:hover{border-color:var(--accent);background:var(--bg-hover)}
+.project-card.selected{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 16px var(--accent-glow)}
+.project-card .proj-name{font-size:15px;font-weight:600;margin-bottom:6px;padding-right:70px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.project-card .proj-meta{font-size:12px;color:var(--text-secondary);margin-bottom:4px}
+.project-card .proj-time{font-size:11px;color:var(--text-muted)}
+.project-card .file-badge{position:absolute;top:12px;right:12px;background:var(--accent-soft);color:var(--accent);padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600}
+.project-empty{text-align:center;padding:48px 20px;color:var(--text-muted)}
+.project-empty .icon{font-size:40px;margin-bottom:12px;opacity:.4}
+.project-empty p{font-size:14px}
+
+/* ── Project Context Bar ───────────────────────────── */
+.project-context{padding:12px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;font-size:13px}
+.project-context .proj-label{color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.project-context .proj-name-display{font-weight:600;color:var(--accent)}
+.project-context .proj-empty{color:var(--text-muted);font-size:13px}
+
+/* ── Workflow link ──────────────────────────────────── */
+.workflow-link{display:none;text-align:center;padding:12px 0}
+.workflow-link.show{display:block}
+.workflow-link a{color:var(--accent);cursor:pointer;font-size:14px;font-weight:600;text-decoration:none;transition:var(--transition)}
+.workflow-link a:hover{color:#2563eb;text-decoration:underline}
+
+/* ── Switch project button ──────────────────────────── */
+.switch-proj{background:none;border:1px solid var(--border-default);color:var(--text-secondary);padding:5px 12px;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;font-family:inherit;transition:var(--transition);white-space:nowrap}
+.switch-proj:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── Collapsible Section ────────────────────────────── */
+.collapsible-section{margin-top:20px;border:1px solid var(--border-default);border-radius:var(--radius)}
+.collapsible-toggle{width:100%;padding:12px 16px;background:var(--bg-surface);border:none;color:var(--text-secondary);font-size:13px;cursor:pointer;text-align:left;font-family:inherit;transition:var(--transition);border-radius:var(--radius)}
+.collapsible-toggle:hover{color:var(--text-primary);background:var(--bg-hover)}
+.collapsible-content{display:none;padding:0 16px 16px}
+.collapsible-content.open{display:block}
+
+/* ── Form single row ────────────────────────────────── */
+.form-row.single{grid-template-columns:1fr}
+.project-context .switch-proj{font-size:11px;color:var(--accent);cursor:pointer;background:none;border:1px solid var(--accent);padding:4px 10px;border-radius:12px;transition:var(--transition);font-family:inherit}
+.project-context .switch-proj:hover{background:var(--accent-soft)}
+
+/* ── Workflow Link ─────────────────────────────────── */
+.workflow-link{padding:12px 16px;background:var(--success-soft);border:1px solid rgba(34,197,94,.2);border-radius:var(--radius);margin-top:12px;display:none}
+.workflow-link.show{display:block}
+.workflow-link a{color:var(--success);font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;transition:var(--transition)}
+.workflow-link a:hover{text-decoration:underline}
+
+/* ── Collapsible Section ───────────────────────────── */
+.collapsible-section{margin-top:20px;border-top:1px solid var(--border-subtle);padding-top:16px}
+.collapsible-toggle{background:none;border:1px solid var(--border-default);color:var(--text-muted);padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-family:inherit;transition:var(--transition);width:100%;text-align:center}
+.collapsible-toggle:hover{color:var(--text-primary);border-color:var(--accent)}
+.collapsible-content{margin-top:12px;display:none}
+.collapsible-content.open{display:block}
+
+/* ── Upload Zone ───────────────────────────────────── */
+.upload-zone{border:2px dashed var(--border-default);border-radius:var(--radius-lg);padding:48px 24px;text-align:center;cursor:pointer;transition:var(--transition);margin-bottom:16px}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:var(--accent-soft)}
+.upload-zone .icon{font-size:36px;margin-bottom:12px;opacity:.6}
+.upload-zone .title{font-size:15px;font-weight:600;margin-bottom:4px}
+.upload-zone .sub{font-size:12px;color:var(--text-muted)}
+.upload-zone input[type=file]{display:none}
+
+.file-review-selects select{width:100%;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border-default);border-radius:var(--radius);color:var(--text-primary);font-size:14px;font-family:inherit;cursor:pointer}
+.file-review-selects select:focus{outline:none;border-color:var(--accent)}
+
+/* ── File checkbox list ───────────────────────────── */
+.file-checkbox-list{max-height:200px;overflow-y:auto;border:1px solid var(--border-default);border-radius:var(--radius);background:var(--bg-input)}
+.file-checkbox{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border-subtle);transition:var(--transition)}
+.file-checkbox:last-child{border-bottom:none}
+.file-checkbox:hover{background:var(--bg-hover)}
+.file-checkbox input[type=checkbox]{accent-color:var(--accent)}
+.file-list{margin-top:12px}
+.file-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);margin-bottom:6px;font-size:13px}
+.file-item .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.file-item .size{color:var(--text-muted);font-size:11px;margin:0 12px}
+.file-item .status{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600}
+.file-item .status.ok{background:var(--success-soft);color:var(--success)}
+.file-item .status.err{background:var(--danger-soft);color:var(--danger)}
+.file-item .remove{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:2px 6px}
+.file-item .remove:hover{color:var(--danger)}
+
+/* ── Manual Input ──────────────────────────────────── */
+.manual-input{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.manual-input .field{display:flex;flex-direction:column}
+.manual-input label{font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px}
+.manual-input textarea{flex:1;min-height:240px;padding:14px;background:var(--bg-input);border:1px solid var(--border-default);border-radius:var(--radius);color:var(--text-primary);font-size:14px;font-family:var(--font-mono);resize:vertical;line-height:1.7;transition:var(--transition)}
+.manual-input textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.review-actions{padding:16px 0}
+.review-actions .btn-review{width:100%;padding:13px;background:var(--accent);border:none;border-radius:var(--radius);color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:var(--transition);font-family:inherit}
+.review-actions .btn-review:hover{background:#2563eb;box-shadow:0 8px 24px var(--accent-glow)}
+.review-actions .btn-review:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+
+/* ── Results ───────────────────────────────────────── */
+.result-section{margin-top:20px}
+.result-card{padding:20px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius-lg);margin-bottom:12px}
+.score-big{font-size:52px;font-weight:800;text-align:center;margin-bottom:8px;line-height:1}
+.score-big.good{color:var(--success)}
+.score-big.warn{color:var(--warn)}
+.score-big.bad{color:var(--danger)}
+.score-summary{display:flex;justify-content:center;gap:16px;margin-bottom:16px;font-size:13px;color:var(--text-secondary)}
+.verdict-item{padding:14px 0;border-bottom:1px solid var(--border-subtle)}
+.verdict-item:last-child{border:none}
+.verdict-item .req{font-weight:600;margin-bottom:4px;font-size:14px}
+.verdict-item .tag{display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-right:6px}
+.tag-compliant{background:var(--success-soft);color:var(--success)}
+.tag-partial{background:var(--warn-soft);color:var(--warn)}
+.tag-non_compliant,.tag-noncompliant{background:var(--danger-soft);color:var(--danger)}
+.tag-unable_to_judge{background:rgba(56,189,248,.12);color:var(--info)}
+.verdict-item .reason{color:var(--text-secondary);font-size:13px;margin-top:4px}
+.verdict-item .suggestion{color:var(--warn);font-size:12px;margin-top:4px}
+
+/* ── Action List (non-compliant items) ──────────────── */
+.action-section{margin-top:16px;border:1px solid rgba(239,68,68,.25);border-radius:var(--radius-lg);overflow:hidden}
+.action-header{padding:14px 18px;background:rgba(239,68,68,.1);color:var(--danger);font-weight:700;font-size:15px;border-bottom:1px solid rgba(239,68,68,.2)}
+.action-item{padding:16px 18px;border-bottom:1px solid var(--border-subtle);background:var(--bg-surface)}
+.action-item:last-child{border-bottom:none}
+.action-item-header{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}
+.action-num{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:22px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:4px;font-size:11px;font-weight:700;color:var(--text-muted);font-family:var(--font-mono);flex-shrink:0}
+.action-req{font-size:14px;font-weight:600;flex:1;line-height:1.5}
+.tag-nc{background:var(--danger-soft);color:var(--danger)}
+.action-bid{color:var(--text-muted);font-size:12px;margin:6px 0 6px 36px;padding:8px 12px;background:var(--bg-elevated);border-radius:var(--radius-sm);border-left:2px solid var(--border-default)}
+.action-detail{margin-left:36px}
+.action-reason{color:var(--text-secondary);font-size:13px;margin-bottom:4px;line-height:1.6}
+.action-suggestion{color:var(--warn);font-size:13px;padding:8px 12px;background:var(--warn-soft);border-radius:var(--radius-sm);line-height:1.6}
+
+/* ── Compact verdict item ──────────────────────────── */
+.verdict-item-compact{padding:8px 0;border-bottom:1px solid var(--border-subtle);display:flex;align-items:flex-start;gap:10px}
+.verdict-item-compact:last-child{border-bottom:none}
+.verdict-item-compact .tag{flex-shrink:0;margin-top:1px}
+.risk-box{margin-top:12px;padding:14px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);color:var(--warn);font-size:13px}
+.suggestions-box{margin-top:8px;padding:14px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);border-radius:var(--radius)}
+.suggestions-box div{color:var(--success);font-size:13px;padding:2px 0}
+
+/* ── Stream indicator ──────────────────────────────── */
+.stream-indicator{display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius);margin-bottom:12px;font-size:13px;font-family:var(--font-mono);color:var(--info)}
+.stream-indicator .dot{width:8px;height:8px;border-radius:50%;background:var(--info);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── Right Panel: AI Chat ──────────────────────────── */
+.right-panel{flex:1;display:flex;flex-direction:column;background:var(--bg-surface);flex-shrink:0;min-width:380px}
+.chat-header{padding:16px 20px;border-bottom:1px solid var(--border-subtle);flex-shrink:0}
+.chat-header h2{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+.chat-header h2 .dot-online{width:8px;height:8px;border-radius:50%;background:var(--success);display:inline-block}
+.chat-header .sub{font-size:12px;color:var(--text-muted);margin-top:2px}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.chat-msg{max-width:90%;padding:10px 14px;border-radius:var(--radius);font-size:13px;line-height:1.6;animation:msgIn .25s ease-out}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.chat-msg.user{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.chat-msg.ai{align-self:flex-start;background:var(--bg-elevated);border:1px solid var(--border-default);border-bottom-left-radius:4px}
+.chat-msg .time{font-size:10px;color:var(--text-muted);margin-top:4px;text-align:right}
+.chat-msg.ai .time{text-align:left}
+.chat-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-muted);gap:8px}
+.chat-empty .icon{font-size:40px;opacity:.3}
+.chat-empty p{font-size:13px}
+.chat-input-area{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border-subtle);flex-shrink:0}
+.chat-input-area input{flex:1;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border-default);border-radius:20px;color:var(--text-primary);font-size:13px;font-family:inherit;transition:var(--transition)}
+.chat-input-area input:focus{outline:none;border-color:var(--accent)}
+.chat-input-area button{width:36px;height:36px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:16px;cursor:pointer;flex-shrink:0;transition:var(--transition);display:flex;align-items:center;justify-content:center}
+.chat-input-area button:hover{background:#2563eb}
+.chat-input-area button:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── Quick actions in chat ─────────────────────────── */
+.chat-quick-actions{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px 4px}
+.chat-quick{font-size:11px;padding:5px 12px;border-radius:14px;border:1px solid var(--border-default);background:transparent;color:var(--text-secondary);cursor:pointer;font-family:inherit;transition:var(--transition);white-space:nowrap}
+/* ── Comparison Table ───────────────────────────────── */
+.compare-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.compare-table thead{position:sticky;top:0;z-index:10}.compare-table th{text-align:left;padding:10px 12px;background:var(--bg-surface);border-bottom:2px solid var(--border-default);color:var(--text-secondary);font-size:11px;text-transform:uppercase;letter-spacing:.5px;position:sticky;top:0;z-index:1}
+.compare-table td{padding:10px 12px;border-bottom:1px solid var(--border-subtle);vertical-align:top;line-height:1.5}
+.compare-table tr:hover td{background:var(--bg-hover)}
+.compare-table .col-num{width:40px;text-align:center;color:var(--text-muted);font-family:var(--font-mono)}
+.compare-table .col-verdict{width:80px}
+.compare-table .col-req{min-width:200px}
+.compare-table .col-bid{min-width:200px}
+.compare-table .col-note{min-width:150px}
+.compare-table .row-nc td{background:rgba(239,68,68,.04)}
+.compare-table .row-partial td{background:rgba(245,158,11,.04)}
+
+/* ── Weight badges ─────────────────────────────────── */
+.weight-badge{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap}
+.weight-red{background:rgba(239,68,68,.15);color:#ef4444}
+.weight-yellow{background:rgba(245,158,11,.15);color:#f59e0b}
+.weight-amber{background:rgba(217,119,6,.12);color:#d97706}
+.row-red td{background:rgba(239,68,68,.04)}
+.row-yellow td{background:rgba(245,158,11,.03)}
+.row-amber td{background:rgba(217,119,6,.02)}
+
+/* ── Action buttons ────────────────────────────────── */
+.btn-action{width:32px;height:28px;border:1px solid var(--border-default);border-radius:4px;background:transparent;cursor:pointer;font-size:14px;transition:var(--transition)}
+.btn-action:hover{border-color:var(--accent)}
+.btn-confirm:hover{background:var(--success-soft);border-color:var(--success)}
+.btn-ignore:hover{background:rgba(100,116,139,.12);border-color:var(--text-muted)}
+.chat-quick:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+
+/* ── Chat Panel Toggle ────────────────────────────── */
+.chat-toggle{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:4px 8px;border-radius:4px;transition:var(--transition);flex-shrink:0;line-height:1}
+.chat-toggle:hover{background:var(--bg-elevated);color:var(--text-primary)}
+.right-panel{transition:flex .3s ease,min-width .3s ease}
+.right-panel.collapsed{flex:0 0 44px;min-width:44px;overflow:hidden}
+.right-panel.collapsed .chat-header{padding:10px;display:flex;align-items:center;justify-content:center}
+.right-panel.collapsed .chat-header>div:first-child{display:none}
+.right-panel.collapsed .chat-messages,
+.right-panel.collapsed .chat-input-area,
+.right-panel.collapsed .chat-quick-actions{display:none}
+.right-panel.collapsed .chat-toggle{font-size:18px}
+
+/* ── Utility ───────────────────────────────────────── */
+.hidden{display:none!important}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-default);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+
+.stream-progress{display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--bg-elevated);border-radius:var(--radius);margin-bottom:12px;font-size:13px;color:var(--text-secondary)}
+.stream-progress .count{font-weight:700;color:var(--accent)}
+.compare-table .col-action{width:100px;text-align:center}
+.btn-confirm,.btn-ignore{padding:4px 10px;border-radius:4px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;transition:var(--transition);min-width:32px}
+.btn-confirm{background:rgba(34,197,94,.2);color:#22c55e}
+.btn-confirm:hover{background:rgba(34,197,94,.4)}
+.btn-ignore{background:rgba(239,68,68,.15);color:#ef4444}
+.btn-ignore:hover{background:rgba(239,68,68,.3)}
+.row-done{opacity:.5;text-decoration:line-through}
+.row-done td{text-decoration:inherit}
+.grade{font-size:11px;padding:2px 6px;border-radius:3px;white-space:nowrap}
+.grade-red{background:rgba(239,68,68,.15);color:#f87171}
+.grade-yellow{background:rgba(234,179,8,.15);color:#facc15}
+.grade-amber{background:rgba(251,146,60,.15);color:#fb923c}
+
+
+
+.btn-primary:hover{background:var(--accent-hover);box-shadow:var(--shadow-lg)}
+.btn-primary:active{transform:scale(0.96);opacity:0.9}
+.btn-secondary:hover{background:var(--bg-hover);border-color:var(--accent)}
+.btn-secondary:active{transform:scale(0.96)}
+.admin-sub-tab:hover{color:var(--text-secondary);background:var(--bg-hover)}
+.admin-sub-tab.active{color:var(--text-primary);background:var(--bg-hover)}
+.chat-quick:hover{background:var(--bg-hover);color:var(--text-primary)}
+.chat-quick:active{transform:scale(0.95)}
+
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══════════════════════════════════════ -->
+<div id="loginPage" class="login-page">
+  <div class="login-card">
+    <div class="logo">标书智审 <span>BidSmart</span></div>
+    <div class="desc">AI 驱动的投标合规审查系统 · DeepSeek</div>
+    <input id="loginUser" placeholder="用户名" value="admin" autocomplete="username">
+    <div class="pwd-wrap">
+      <input id="loginPass" type="password" placeholder="密码" value="admin123" autocomplete="current-password">
+      <button type="button" class="pwd-toggle" onclick="toggleLoginPass()" tabindex="-1" title="显示密码">👁</button>
+    </div>
+    <button class="btn" onclick="login()">登 录</button>
+    <div class="login-version" id="loginVersion">v—</div>
+  </div>
+</div>
+
+<!-- ═══ APP ══════════════════════════════════════════ -->
+<div id="appPage" class="app-page hidden">
+  <header class="app-header">
+    <div class="brand">标书智审 <span>BidSmart Agent</span></div>
+    <div class="user-area">
+      <span class="user-tag" id="userTag">admin</span>
+      <button class="logout-btn" onclick="logout()">退出</button>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <!-- Left: Work Area -->
+    <div class="left-panel">
+      <div class="panel-tabs">
+        <button class="panel-tab active" onclick="switchPanel('project')">📁 项目管理</button>
+        <button class="panel-tab" onclick="switchPanel('upload')">📄 文件上传</button>
+        <button class="panel-tab" onclick="switchPanel('fileReview')">📊 文件审查</button>
+        <button class="panel-tab" onclick="switchPanel('compare')">📋 对照表</button>
+        <button class="panel-tab" id="adminTabBtn" onclick="switchPanel('admin')" style="display:none">⚙️ 管理</button>
+      </div>
+      <div class="panel-content">
+
+        <!-- ═══ Project Management Panel ══════════════════════ -->
+        <div id="projectPanel">
+          <div class="project-create-form" id="projectCreateForm">
+            <h3>➕ 创建新项目</h3>
+            <div class="form-row single">
+              <input id="projName" placeholder="项目名称 *" required>
+            </div>
+            <div class="form-row">
+              <input id="projDept" placeholder="投标部门">
+              <input id="projEditor" placeholder="投标书编辑人">
+            </div>
+            <div class="form-row">
+              <input id="projBidTime" type="date" placeholder="投标时间">
+              <div></div>
+            </div>
+            <button class="btn-create" onclick="createProject()">创建项目</button>
+          </div>
+          <div class="project-grid" id="projectList">
+            <div class="project-empty">
+              <div class="icon">📁</div>
+              <p>暂无项目，请先创建</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ Upload Panel ═══════════════════════════════════ -->
+        <div id="uploadPanel" class="hidden">
+          <div class="project-context" id="uploadProjectContext">
+            <div>
+              <div class="proj-label">当前项目</div>
+              <span class="proj-empty">请先在项目管理中选择项目</span>
+            </div>
+            <button class="switch-proj" onclick="switchPanel('project')">📁 切换项目</button>
+          </div>
+          <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <div class="icon">📂</div>
+            <div class="title">点击或拖拽文件到此处</div>
+            <div class="sub">支持 .docx · .pdf · .wps · .txt · 最大 100MB</div>
+            <input type="file" id="fileInput" accept=".docx,.pdf,.wps,.txt" multiple onchange="handleFiles(this.files)">
+          </div>
+          <div class="workflow-link" id="uploadWorkflowLink">
+            <a onclick="switchPanel('fileReview')">📊 前往文件审查 →</a>
+          </div>
+          <div class="file-list" id="fileList"></div>
+
+          <!-- Manual Input (collapsible) -->
+          <div class="collapsible-section">
+            <button class="collapsible-toggle" onclick="toggleManualInput()">✏️ 手动输入文本审查</button>
+            <div class="collapsible-content" id="manualCollapsible">
+              <div class="manual-input">
+                <div class="field">
+                  <label>📋 招标文件关键要求</label>
+                  <textarea id="tenderText" placeholder="粘贴招标文件中的评审条款...&#10;&#10;例如：&#10;1. 投标人须具备特种设备安装改造维修许可证A级资质&#10;2. 电梯品牌须为国际知名品牌，提供原厂授权书&#10;3. 项目负责人须具有5年以上同类项目管理经验&#10;4. 质保期不少于3年&#10;5. 须提供近3年同类项目业绩证明（合同金额≥500万）"></textarea>
+                </div>
+                <div class="field">
+                  <label>📝 投标书响应内容</label>
+                  <textarea id="bidText" placeholder="粘贴投标书对应条款的响应内容...&#10;&#10;例如：&#10;1. 我司持有特种设备安装维修B级许可证（证书编号：TS3344XXX）&#10;2. 本次投标采用国产XX品牌电梯&#10;3. 项目经理李工，从业3年，负责过1个电梯维保项目&#10;4. 质保期承诺2年&#10;5. 近3年完成2个维保项目（最大合同金额200万）"></textarea>
+                </div>
+              </div>
+              <div class="review-actions">
+                <button class="btn-review" id="reviewBtn" onclick="startReview()">🤖 AI 开始审查</button>
+              </div>
+              <div id="streamBox" class="stream-indicator hidden"></div>
+              <div id="resultSection" class="result-section"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ File Review Panel ══════════════════════════════ -->
+
+        <!-- ═══ Comparison Table Panel ═══════════════════════════ -->
+        <div id="comparePanel" class="hidden">
+          <div class="project-context" id="compareProjectContext">
+            <div>
+              <div class="proj-label">当前审查项目</div>
+              <span class="proj-empty">请先完成文件审查</span>
+            </div>
+            <button class="switch-proj" onclick="switchPanel('fileReview')">📊 返回审查</button>
+          </div>
+          <div id="compareTableContainer">
+            <div style="text-align:center;padding:48px;color:var(--text-muted)">
+              <div style="font-size:40px;margin-bottom:12px;opacity:.4">📋</div>
+              <p>完成文件审查后，不合规/部分合规项将在此以对照表形式展示</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ File Review Panel ══════════════════════════════ -->
+        <div id="fileReviewPanel" class="hidden">
+          <div class="project-context" id="reviewProjectContext">
+            <div>
+              <div class="proj-label">当前项目</div>
+              <span class="proj-empty">请先在项目管理中选择项目</span>
+            </div>
+            <button class="switch-proj" onclick="switchPanel('project')">📁 切换项目</button>
+          </div>
+          <div class="file-review-selects" id="fileReviewSelects">
+            <div class="field" style="margin-bottom:12px">
+              <label>📋 招标文件（可多选）</label>
+              <div class="file-checkbox-list" id="tenderDocList">
+                <div style="color:var(--text-muted);font-size:12px;padding:8px">加载中...</div>
+              </div>
+            </div>
+            <div class="field" style="margin-bottom:12px">
+              <label>📝 投标文件（可多选）</label>
+              <div class="file-checkbox-list" id="bidDocList">
+                <div style="color:var(--text-muted);font-size:12px;padding:8px">加载中...</div>
+              </div>
+            </div>
+          </div>
+          <div id="fileDocMeta" class="hidden" style="margin-bottom:16px;padding:12px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius);font-size:13px;color:var(--text-secondary)"></div>
+          <div class="review-actions">
+            <button class="btn-review" id="fileReviewBtn" onclick="startFileReview()" disabled>📊 选择文件后开始审查</button>
+            <button class="btn-review" id="tenderAnalysisBtn" onclick="startTenderAnalysis()" disabled style="background:var(--accent);margin-top:8px">📋 标前分析 — 三层分类</button>
+          </div>
+          <div id="fileStreamBox" class="stream-indicator hidden"></div>
+          <div id="fileResultSection" class="result-section"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Right: AI Chat Session -->
+    <div class="right-panel">
+      <div class="chat-header" style="display:flex;align-items:flex-start;justify-content:space-between">
+        <div>
+          <h2><span class="dot-online"></span> AI 会话</h2>
+          <div class="sub">审查助手 · 随时追问</div>
+        </div>
+        <button class="chat-toggle" onclick="toggleChat()" title="收起面板">◀</button>
+      </div>
+      <div class="chat-quick-actions" id="quickActions">
+        <button class="chat-quick" onclick="sendQuick('总结本次审查的风险点')">📊 风险总结</button>
+        <button class="chat-quick" onclick="sendQuick('给出一份整改建议清单')">📋 整改建议</button>
+        <button class="chat-quick" onclick="sendQuick('对比分析合规与不合规项')">🔍 对比分析</button>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-empty" id="chatEmpty">
+          <div class="icon">💬</div>
+          <p>AI 审查完成后可在此追问</p>
+          <p style="font-size:11px">审查结果会自动同步到会话</p>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <input id="chatInput" placeholder="输入追问..." onkeydown="if(event.key==='Enter')sendChat()">
+        <button onclick="sendChat()" id="chatSendBtn">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Panel -->
+  <div id="adminPanel" class="hidden" style="padding:20px;overflow-y:auto">
+    <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--border-subtle);padding-bottom:12px">
+      <button class="admin-sub-tab active" onclick="switchAdminSub('users')">👥 用户管理</button>
+      <button class="admin-sub-tab" onclick="switchAdminSub('config')">⚙️ 系统配置</button>
+      <button class="admin-sub-tab" onclick="switchAdminSub('data')">📦 数据迁移</button>
+      <button class="admin-sub-tab" onclick="switchAdminSub('kb')">📚 知识库</button>
+    </div>
+
+    <!-- Users sub-panel -->
+    <div id="adminUsersPanel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 style="font-size:16px;font-weight:600">用户列表</h3>
+        <button class="btn-primary" onclick="showAddUserDialog()" style="padding:8px 16px;font-size:13px">+ 新增用户</button>
+      </div>
+      <div class="table-wrap">
+        <table class="compare-table" id="adminUserTable">
+          <thead><tr><th>用户名</th><th>角色</th><th>创建时间</th><th>操作</th></tr></thead>
+          <tbody id="adminUserTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Config sub-panel -->
+    <div id="adminConfigPanel" class="hidden">
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:16px">系统配置</h3>
+      <div style="display:flex;flex-direction:column;gap:12px;max-width:500px">
+        <label style="font-size:13px;color:var(--text-secondary)">API Base URL</label>
+        <input id="cfgBaseUrl" class="admin-input" placeholder="https://api.deepseek.com">
+        <label style="font-size:13px;color:var(--text-secondary)">API Key</label>
+        <input id="cfgApiKey" class="admin-input" type="password" placeholder="sk-...">
+        <label style="font-size:13px;color:var(--text-secondary)">模型名称</label>
+        <input id="cfgModel" class="admin-input" placeholder="deepseek-chat">
+        <label style="font-size:13px;color:var(--text-secondary)">最大上传 (MB)</label>
+        <input id="cfgMaxUpload" class="admin-input" type="number" placeholder="250">
+        <button class="btn-primary" onclick="saveConfig()" style="width:120px;margin-top:8px">保存配置</button>
+      </div>
+    </div>
+
+    <!-- Data sub-panel -->
+    <div id="adminDataPanel" class="hidden">
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:16px">数据迁移</h3>
+      <div style="display:flex;gap:32px;flex-wrap:wrap">
+        <div style="flex:1;min-width:280px;padding:20px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius)">
+          <h4 style="margin-bottom:8px">📥 导出数据</h4>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">导出全部数据（数据库 + 文件）为 tar.gz</p>
+          <button class="btn-primary" onclick="exportData()">导出全部数据</button>
+          <div id="exportStatus" style="margin-top:8px;font-size:12px;color:var(--text-muted)"></div>
+        </div>
+        <div style="flex:1;min-width:280px;padding:20px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius)">
+          <h4 style="margin-bottom:8px">📤 导入数据</h4>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">从导出的 tar.gz 文件恢复（合并模式）</p>
+          <input type="file" id="importFileInput" accept=".tar.gz" style="margin-bottom:8px;font-size:13px">
+          <button class="btn-primary" onclick="importData()">导入数据包</button>
+          <div id="importStatus" style="margin-top:8px;font-size:12px;color:var(--text-muted)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KB sub-panel -->
+    <div id="adminKbPanel" class="hidden">
+      <div class="kb-section">
+        <div class="kb-section-title">🔍 知识检索</div>
+        <div class="kb-search-row">
+          <input type="text" id="kbSearchInput" placeholder="输入关键词检索知识库..." class="kb-search-input-lg" onkeydown="if(event.key==='Enter')searchKB()">
+          <button class="kb-search-btn-lg" onclick="searchKB()">检索</button>
+        </div>
+      </div>
+
+      <div class="kb-section">
+        <div class="kb-section-title">📤 上传文档</div>
+        <div class="kb-upload-form">
+          <div class="kb-form-row">
+            <div class="kb-form-group flex-2">
+              <label class="kb-label">文档标题</label>
+              <input id="kbTitle" class="kb-input" placeholder="例如：招标投标法">
+            </div>
+            <div class="kb-form-group flex-1">
+              <label class="kb-label">来源类型</label>
+              <select id="kbSourceType" class="kb-select">
+                <option value="law">法律法规</option>
+                <option value="regulation">规章制度</option>
+                <option value="experience">经验文章</option>
+                <option value="manual">其他</option>
+              </select>
+            </div>
+          </div>
+          <div class="kb-form-row">
+            <div class="kb-form-group flex-2">
+              <label class="kb-label">选择文件 <span class="kb-hint">(.txt .pdf .docx .md)</span></label>
+              <input type="file" id="kbFileInput" accept=".txt,.pdf,.docx,.md" class="kb-file-input" onchange="kbFileChanged()">
+            </div>
+            <div class="kb-form-group flex-1 kb-upload-btn-wrap">
+              <button class="kb-upload-btn" onclick="uploadKbDoc()">📤 上传到知识库</button>
+            </div>
+          </div>
+        </div>
+        <div id="kbUploadStatus" class="kb-status"></div>
+      </div>
+
+      <div class="kb-section">
+        <div class="kb-section-title">📋 已上传文档</div>
+        <div class="table-wrap">
+          <table class="compare-table">
+            <thead><tr><th>标题</th><th>类型</th><th>分块数</th><th>上传时间</th><th>操作</th></tr></thead>
+            <tbody id="kbDocTbody"><tr><td colspan="5" style="text-align:center;color:var(--text-muted)">加载中...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="kbSearchResults" class="hidden" style="margin-top:16px">
+        <h4 style="font-size:14px;font-weight:600;margin-bottom:8px">检索结果</h4>
+        <div id="kbSearchContent"></div>
+      </div>
+
+      <!-- How KB + AI work -->
+      <div class="kb-info-box">
+        <strong>📚 知识库与 AI 如何协作</strong><br>
+        <span class="step-num">1</span> <strong>上传</strong>：在上方上传区提交招标法规、制度文件（.txt/.pdf/.docx）<br>
+        <span class="step-num">2</span> <strong>向量化</strong>：系统自动用 BGE 模型将文档分块并转为语义向量存储<br>
+        <span class="step-num">3</span> <strong>检索</strong>：在检索框输入关键词，系统搜索语义最相关的知识块<br>
+        <span class="step-num">4</span> <strong>AI 调用</strong>：在 AI 对话框中提问时，知识库相关内容自动注入为上下文，AI 基于知识库回答<br>
+        <span style="display:block;margin-top:8px;color:var(--text-ghost)">💡 文档存储位置：服务器 <code>/root/bidsmart/storage/kb/</code> · 向量索引：内存/FAISS</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add User Dialog -->
+<div id="addUserDialog" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center">
+  <div style="width:380px;padding:28px 24px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg)">
+    <h3 style="font-size:16px;font-weight:600;margin-bottom:20px">新增用户</h3>
+    <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">用户名</label>
+    <input id="newUsername" class="admin-input" placeholder="2-64字符" style="width:100%;margin-bottom:14px">
+    <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">密码</label>
+    <input id="newPassword" class="admin-input" type="password" placeholder="至少6位" style="width:100%;margin-bottom:14px">
+    <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">角色</label>
+    <select id="newRole" class="admin-input" style="width:100%;margin-bottom:14px">
+      <option value="bid_editor">投标书编辑</option>
+      <option value="reviewer">审核员</option>
+      <option value="viewer">观察员</option>
+      <option value="admin">管理员</option>
+    </select>
+    <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">管理员密码确认</label>
+    <input id="newAdminPwd" class="admin-input" type="password" placeholder="输入你的管理员密码" style="width:100%;margin-bottom:18px">
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn-secondary" onclick="closeAddUserDialog()" style="padding:8px 20px;font-size:13px">取消</button>
+      <button class="btn-primary" onclick="submitAddUser()" style="padding:8px 20px;font-size:13px">确认创建</button>
+    </div>
+  </div>
+</div>
+
+<!-- Password Change Dialog (first login) -->
+<div id="changePwdDialog" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center">
+  <div style="width:360px;padding:28px 24px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg)">
+    <h3 style="font-size:16px;font-weight:600;margin-bottom:8px">首次登录 · 更新密码</h3>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:18px">管理员已为您创建账号，请设置新密码</p>
+    <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">新密码</label>
+    <input id="chgNewPwd" class="admin-input" type="password" placeholder="至少6位" style="width:100%;margin-bottom:12px">
+    <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">确认新密码</label>
+    <input id="chgNewPwd2" class="admin-input" type="password" placeholder="再次输入" style="width:100%;margin-bottom:18px">
+    <button class="btn-primary" onclick="submitChangePassword()" style="width:100%;padding:10px;font-size:14px">更新密码并登录</button>
+    <p id="chgPwdErr" style="margin-top:10px;font-size:12px;color:#dc2626;text-align:center;display:none"></p>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   BidSmart Agent — Client State & Logic
+   ═══════════════════════════════════════════════════════ */
+let token = '';
+let currentUser = '';
+let currentUserRole = '';
+let currentProjectId = null;
+let lastReviewResult = null; // stored for chat context
+let streamActive = false; // EventSource active flag
+let compareRowCount = 0; // incremental row counter
+let streamedItems = []; // items collected during streaming
+
+/* ── Utility ───────────────────────────────────────── */
+function escHtml(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+/* ── Login helpers ────────────────────────────────── */
+function kbFileChanged(){} // placeholder
+function toggleLoginPass(){
+  const inp=document.getElementById('loginPass');
+  const btn=document.querySelector('.pwd-toggle');
+  if(inp.type==='password'){
+    inp.type='text';
+    btn.textContent='🙈';
+    btn.title='隐藏密码';
+    btn.classList.add('showing');
+  }else{
+    inp.type='password';
+    btn.textContent='👁';
+    btn.title='显示密码';
+    btn.classList.remove('showing');
+  }
+}
+// Fetch version on load
+fetch('/health').then(r=>r.json()).then(d=>{
+  const el=document.getElementById('loginVersion');
+  if(el && d.version) el.textContent = 'v' + d.version;
+}).catch(()=>{});
+function formatSize(bytes){
+  if(bytes<1024) return bytes+' B';
+  if(bytes<1048576) return (bytes/1024).toFixed(1)+' KB';
+  return (bytes/1048576).toFixed(1)+' MB';
+}
+
+/* ── Auth ──────────────────────────────────────────── */
+async function login(){
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  if(!u||!p) return alert('请输入用户名和密码');
+  try {
+    const r = await fetch('/auth/login',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username:u,password:p})
+    });
+    if(!r.ok){const e=await r.text();return alert('登录失败: '+e)}
+    const d = await r.json();
+    token = d.access_token;
+    currentUser = u;
+    document.getElementById('userTag').textContent = u;
+    // Fetch role and show admin tab if admin
+    // Check if must change password on first login
+    if(d.must_change_password){
+      document.getElementById('loginPage').classList.add('hidden');
+      document.getElementById('changePwdDialog').classList.remove('hidden');
+      document.getElementById('chgNewPwd').value='';
+      document.getElementById('chgNewPwd2').value='';
+      return;
+    }
+    fetch('/auth/me',{headers:{'Authorization':'Bearer '+token}})
+      .then(r=>r.json())
+      .then(d=>{
+        currentUserRole = d.role;
+        const ab = document.getElementById('adminTabBtn');
+        ab.style.display = d.role === 'admin' ? '' : 'none';
+      }).catch(()=>{});
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('appPage').classList.remove('hidden');
+    document.getElementById('loginUser').value='';
+    document.getElementById('loginPass').value='';
+    loadProjects();
+  }catch(e){alert('网络错误: '+e.message)}
+}
+
+async function submitChangePassword(){
+  const p1=document.getElementById('chgNewPwd').value;
+  const p2=document.getElementById('chgNewPwd2').value;
+  const err=document.getElementById('chgPwdErr');
+  if(!p1||p1.length<6){err.textContent='密码至少6位';err.style.display='block';return}
+  if(p1!==p2){err.textContent='两次密码不一致';err.style.display='block';return}
+  err.style.display='none';
+  try{
+    const r=await fetch('/auth/change-password',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({new_password:p1})
+    });
+    if(!r.ok){const e=await r.json();err.textContent=e.detail||'更新失败';err.style.display='block';return}
+    document.getElementById('changePwdDialog').classList.add('hidden');
+    document.getElementById('appPage').classList.remove('hidden');
+    // Fetch role
+    fetch('/auth/me',{headers:{'Authorization':'Bearer '+token}})
+      .then(r=>r.json())
+      .then(d=>{
+        currentUserRole = d.role;
+        const ab = document.getElementById('adminTabBtn');
+        ab.style.display = d.role === 'admin' ? '' : 'none';
+      }).catch(()=>{});
+    loadProjects();
+  }catch(e){err.textContent='网络错误: '+e.message;err.style.display='block'}
+}
+
+function logout(){
+  token='';currentUser='';currentProjectId=null;lastReviewResult=null;streamActive=false;compareRowCount=0;streamedItems=[];actionRowIdx=0;
+  document.getElementById('appPage').classList.add('hidden');
+  document.getElementById('loginPage').classList.remove('hidden');
+  document.getElementById('changePwdDialog').classList.add('hidden');
+  document.getElementById('chatMessages').innerHTML='<div class="chat-empty" id="chatEmpty"><div class="icon">💬<\/div><p>AI 审查完成后可在此追问<\/p><p style="font-size:11px">审查结果会自动同步到会话<\/p><\/div>';
+}
+
+/* ── Panel switching ───────────────────────────────── */
+const PANEL_NAMES = ['project','upload','fileReview','compare','admin'];
+
+function switchPanel(name){
+  const tabs = document.querySelectorAll('.panel-tab');
+  tabs.forEach((t,i) => t.classList.toggle('active', PANEL_NAMES[i] === name));
+  document.getElementById('projectPanel').classList.toggle('hidden', name !== 'project');
+  document.getElementById('uploadPanel').classList.toggle('hidden', name !== 'upload');
+  document.getElementById('fileReviewPanel').classList.toggle('hidden', name !== 'fileReview');
+  document.getElementById('comparePanel').classList.toggle('hidden', name !== 'compare');
+  document.getElementById('adminPanel').classList.toggle('hidden', name !== 'admin');
+  if(name === 'admin'){
+    if(currentUserRole !== 'admin'){ alert('仅管理员可访问'); return; }
+    switchAdminSub('users'); loadAdminUsers();
+  }
+  if(name === 'project') loadProjects();
+  if(name === 'fileReview'){
+    updateProjectContexts();
+    loadDocsForReview();
+  }
+  if(name === 'upload') updateProjectContexts();
+  if(name === 'compare' && !streamActive) buildCompareTable();
+}
+
+/* ── Project Management ─────────────────────────────── */
+async function loadProjects(){
+  try {
+    const r = await fetch('/projects?page=1&page_size=50',{
+      headers:{'Authorization':'Bearer '+token}
+    });
+    if(!r.ok) return;
+    const d = await r.json();
+    const list = document.getElementById('projectList');
+    const items = d.items || [];
+    if(items.length === 0){
+      list.innerHTML = `<div class="project-empty"><div class="icon">📁<\/div><p>暂无项目，请先创建<\/p><\/div>`;
+      return;
+    }
+    let html = '';
+    items.forEach(p=>{
+      const selected = currentProjectId === p.id ? ' selected' : '';
+      const time = p.created_at ? new Date(p.created_at).toLocaleDateString('zh-CN') : (p.bid_time ? p.bid_time : '');
+      html += `<div class="project-card${selected}" onclick="selectProject(${p.id})" data-id="${p.id}">
+        <div class="file-badge">${p.document_count||0} 份文件<\/div>
+        <div class="proj-name">${escHtml(p.name)}<\/div>
+        <div class="proj-meta">${escHtml(p.department||'—')} · ${escHtml(p.editor||'—')}<\/div>
+        <div class="proj-time">${time}<\/div>
+      <\/div>`;
+    });
+    list.innerHTML = html;
+    updateProjectContexts();
+  }catch(e){}
+}
+
+function selectProject(id){
+  currentProjectId = id;
+  document.querySelectorAll('.project-card').forEach(c=>c.classList.remove('selected'));
+  const card = document.querySelector(`.project-card[data-id="${id}"]`);
+  if(card) card.classList.add('selected');
+  updateProjectContexts();
+  // Clear stale data
+  document.getElementById('fileList').innerHTML='';
+  document.getElementById('uploadWorkflowLink').classList.remove('show');
+  switchPanel('upload');
+}
+
+function updateProjectContexts(){
+  const ctxs = ['uploadProjectContext','reviewProjectContext'];
+  ctxs.forEach(ctxId => {
+    const el = document.getElementById(ctxId);
+    if(!el) return;
+    const container = el.querySelector('div');
+    const empty = container.querySelector('.proj-empty');
+    const display = container.querySelector('.proj-name-display');
+
+    if(!currentProjectId){
+      if(display) display.remove();
+      if(!empty){
+        const span = document.createElement('span');
+        span.className = 'proj-empty';
+        span.textContent = '请先在项目管理中选择项目';
+        container.appendChild(span);
+      }
+      return;
+    }
+
+    // Resolve project name
+    const card = document.querySelector(`.project-card[data-id="${currentProjectId}"]`);
+    const name = card ? card.querySelector('.proj-name').textContent : '未知项目';
+
+    if(empty) empty.remove();
+    if(display){
+      display.textContent = name;
+    } else {
+      const span = document.createElement('span');
+      span.className = 'proj-name-display';
+      span.textContent = name;
+      container.appendChild(span);
+    }
+  });
+}
+
+async function createProject(){
+  const name = document.getElementById('projName').value.trim();
+  if(!name) return alert('请输入项目名称');
+  const department = document.getElementById('projDept').value.trim();
+  const editor = document.getElementById('projEditor').value.trim();
+  const bid_time = document.getElementById('projBidTime').value;
+  const btn = document.querySelector('#projectCreateForm .btn-create');
+  btn.disabled = true; btn.textContent = '创建中...';
+  try {
+    const r = await fetch('/projects',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({name,description:'',department,editor,bid_time:bid_time||null})
+    });
+    if(!r.ok){const e=await r.text();alert('创建失败: '+e);btn.disabled=false;btn.textContent='创建项目';return}
+    const p = await r.json();
+    await loadProjects();
+    selectProject(p.id);
+    // Clear form
+    document.getElementById('projName').value='';
+    document.getElementById('projDept').value='';
+    document.getElementById('projEditor').value='';
+    document.getElementById('projBidTime').value='';
+  }catch(e){alert('网络错误: '+e.message)}
+  btn.disabled = false; btn.textContent = '创建项目';
+}
+
+/* ── File Upload ────────────────────────────────────── */
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('dragover')});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop',e=>{
+  e.preventDefault();dropZone.classList.remove('dragover');
+  handleFiles(e.dataTransfer.files);
+});
+
+function handleFiles(files){
+  if(!files.length) return;
+  Array.from(files).forEach(f=>uploadFile(f));
+}
+
+async function uploadFile(file){
+  if(!currentProjectId){
+    alert('请先在项目管理中选择项目');
+    return;
+  }
+
+  const id = 'f_'+Date.now();
+  const list = document.getElementById('fileList');
+  list.innerHTML += `<div class="file-item" id="${id}">
+    <span class="name">${escHtml(file.name)}<\/span>
+    <span class="size">${formatSize(file.size)}<\/span>
+    <span class="status">上传中...<\/span>
+  <\/div>`;
+
+  try {
+    const fd = new FormData();
+    fd.append('file',file);
+    const r = await fetch(`/projects/${currentProjectId}/documents`,{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+token},
+      body:fd
+    });
+    const el = document.getElementById(id);
+    if(r.ok){
+      el.querySelector('.status').className='status ok';
+      el.querySelector('.status').textContent='✓';
+      loadProjects();
+      // Show workflow guidance
+      document.getElementById('uploadWorkflowLink').classList.add('show');
+    }else{
+      const err = await r.text();
+      el.querySelector('.status').className='status err';
+      el.querySelector('.status').textContent='失败';
+      el.title = err;
+    }
+  }catch(e){
+    const el = document.getElementById(id);
+    el.querySelector('.status').className='status err';
+    el.querySelector('.status').textContent='失败';
+  }
+}
+
+/* ── Manual Input Toggle ────────────────────────────── */
+function toggleManualInput(){
+  const content = document.getElementById('manualCollapsible');
+  content.classList.toggle('open');
+}
+
+/* ── AI Review (Manual) ────────────────────────────── */
+async function startReview(){
+  const tender = document.getElementById('tenderText').value.trim();
+  const bid = document.getElementById('bidText').value.trim();
+  if(!tender||!bid) return alert('请填写招标要求和投标响应');
+
+  const btn = document.getElementById('reviewBtn');
+  const stream = document.getElementById('streamBox');
+  const resultSection = document.getElementById('resultSection');
+
+  btn.disabled=true; btn.textContent='⏳ DeepSeek 审查中...';
+  stream.classList.remove('hidden');
+  stream.innerHTML='<span class="dot"><\/span> AI 正在逐项比对分析...';
+  resultSection.innerHTML='';
+
+  try {
+    const r = await fetch('/ai/review',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({tender,bid})
+    });
+
+    if(!r.ok){
+      const err = await r.text();
+      stream.innerHTML='<span style="color:var(--danger)">❌ 审查失败: HTTP '+r.status+' '+err+'<\/span>';
+      btn.disabled=false; btn.textContent='🤖 AI 开始审查';
+      return;
+    }
+
+    const data = await r.json();
+    stream.innerHTML='<span style="color:var(--success)">✅ 审查完成<\/span>';
+    renderResultTo(data, resultSection);
+    lastReviewResult = data;
+
+    // Auto-sync to chat
+    syncResultToChat(data);
+  }catch(e){
+    stream.innerHTML='<span style="color:var(--danger)">❌ 网络错误: '+e.message+'<\/span>';
+    btn.disabled=false; btn.textContent='🤖 AI 开始审查';
+  }
+  btn.disabled=false; btn.textContent='🤖 AI 开始审查';
+}
+
+/* ── File Review ─────────────────────────────────── */
+async function loadDocsForReview(){
+  const tList = document.getElementById('tenderDocList');
+  const bList = document.getElementById('bidDocList');
+  if(!currentProjectId){
+    tList.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px">请先在项目管理中选择项目<\/div>';
+    bList.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px">请先在项目管理中选择项目<\/div>';
+    document.getElementById('fileReviewBtn').disabled = true;
+    return;
+  }
+  try {
+    const r = await fetch(`/projects/${currentProjectId}/documents`,{
+      headers:{'Authorization':'Bearer '+token}
+    });
+    if(!r.ok){tList.innerHTML='加载失败';bList.innerHTML='加载失败';return}
+    const d = await r.json();
+    const items = Array.isArray(d) ? d : (d.items || []);
+    if(items.length === 0){
+      tList.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px">该项目暂无文件<\/div>';
+      bList.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px">该项目暂无文件<\/div>';
+      return;
+    }
+    let opts = '';
+    items.forEach(doc=>{
+      opts += `<label class="file-checkbox"><input type="checkbox" value="${doc.id}" class="tender-check" onchange="onDocSelect()"> ${escHtml(doc.original_name)} <span style="color:var(--text-muted);font-size:11px">(${formatSize(doc.size)})<\/span></label>`;
+    });
+    tList.innerHTML = opts;
+    // Clone for bid list (different class name for selection tracking)
+    let bOpts = '';
+    items.forEach(doc=>{
+      bOpts += `<label class="file-checkbox"><input type="checkbox" value="${doc.id}" class="bid-check" onchange="onDocSelect()"> ${escHtml(doc.original_name)} <span style="color:var(--text-muted);font-size:11px">(${formatSize(doc.size)})<\/span></label>`;
+    });
+    bList.innerHTML = bOpts;
+    document.getElementById('fileReviewBtn').disabled = true;
+    document.getElementById('fileDocMeta').classList.add('hidden');
+  }catch(e){}
+}
+
+function onDocSelect(){
+  const tenderChecks = document.querySelectorAll('.tender-check:checked');
+  const bidChecks = document.querySelectorAll('.bid-check:checked');
+  const btn = document.getElementById('fileReviewBtn');
+  const analysisBtn = document.getElementById('tenderAnalysisBtn');
+
+  // File review: needs both tender + bid
+  if(tenderChecks.length > 0 && bidChecks.length > 0){
+    btn.disabled = false;
+    btn.textContent = `🤖 AI 审查 (${tenderChecks.length}个招标 + ${bidChecks.length}个投标)`;
+  } else {
+    btn.disabled = true;
+    btn.textContent = '📊 选择文件后开始审查';
+    document.getElementById('fileDocMeta').classList.add('hidden');
+  }
+
+  // Tender analysis: only needs tender
+  if(tenderChecks.length > 0){
+    analysisBtn.disabled = false;
+    analysisBtn.textContent = `📋 标前分析 (${tenderChecks.length}个招标文件)`;
+  } else {
+    analysisBtn.disabled = true;
+    analysisBtn.textContent = '📋 标前分析 — 三层分类';
+  }
+}
+
+async function startFileReview(){
+  const tenderChecks = document.querySelectorAll('.tender-check:checked');
+  const bidChecks = document.querySelectorAll('.bid-check:checked');
+  if(tenderChecks.length === 0 || bidChecks.length === 0) return;
+  const tenderIds = Array.from(tenderChecks).map(c=>parseInt(c.value));
+  const bidIds = Array.from(bidChecks).map(c=>parseInt(c.value));
+
+  const btn = document.getElementById('fileReviewBtn');
+  const stream = document.getElementById('fileStreamBox');
+  const resultSection = document.getElementById('fileResultSection');
+
+  btn.disabled=true; btn.textContent='⏳ 逐条审查中...';
+  stream.classList.remove('hidden');
+  stream.innerHTML='<span class="dot"><\/span> 正在启动流式审查...';
+  resultSection.innerHTML='';
+  streamActive = true;
+  compareRowCount = 0;
+  streamedItems = [];
+
+  // Initialize compare table
+  initCompareTable();
+
+  // Build URL with query params (EventSource is GET-only, use POST workaround)
+  const body = JSON.stringify({tender_doc_ids:tenderIds, bid_doc_ids:bidIds});
+
+  // Use fetch + ReadableStream for SSE (more reliable than EventSource for POST)
+  try {
+    const r = await fetch('/ai/review-file/stream',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:body
+    });
+
+    if(!r.ok){
+      const err = await r.text();
+      stream.innerHTML='<span style="color:var(--danger)">❌ '+err+'<\/span>';
+      btn.disabled=false; btn.textContent='🤖 AI 开始审查文件';
+      streamActive = false;
+      return;
+    }
+
+    const reader = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while(streamActive){
+      const {done, value} = await reader.read();
+      if(done) break;
+      buffer += decoder.decode(value, {stream:true});
+
+      // Process complete SSE messages
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for(const line of lines){
+        if(line.startsWith('data: ')){
+          try {
+            const event = JSON.parse(line.slice(6));
+            if(event.status === 'loading' || event.status === 'parsing' || event.status === 'extracting'){
+              stream.innerHTML=`<span class="dot"><\/span> ${event.message}`;
+            } else if(event.status === 'reviewing' && event.item){
+              compareRowCount++;
+              stream.innerHTML=`<span style="color:var(--accent)">🔍 正在审查第 ${compareRowCount} 条...<\/span>`;
+              appendCompareRow(event.item, compareRowCount);
+              streamedItems.push(event.item);
+            } else if(event.status === 'done' && event.result){
+              lastReviewResult = event.result;
+              stream.innerHTML=`<span style="color:var(--success)">✅ 审查完成<\/span>
+                <span style="margin-left:8px;font-size:12px;color:var(--text-muted)">
+                ${event.result.requirement_count||'?'}条 · 管线流式
+                <\/span>`;
+              renderResultTo(event.result, resultSection);
+              syncResultToChat(event.result);
+              finalizeCompareTable(event.result);
+              btn.disabled=false; btn.textContent='🤖 AI 开始审查文件';
+              streamActive = false;
+            } else if(event.status === 'error'){
+              stream.innerHTML=`<span style="color:var(--danger)">❌ ${event.message}<\/span>`;
+              btn.disabled=false; btn.textContent='🤖 AI 开始审查文件';
+              streamActive = false;
+            }
+          }catch(e){/* skip malformed lines */}
+        }
+      }
+    }
+  }catch(e){
+    stream.innerHTML='<span style="color:var(--danger)">❌ 网络错误: '+e.message+'<\/span>';
+    btn.disabled=false; btn.textContent='🤖 AI 开始审查文件';
+    streamActive = false;
+  }
+}
+
+/* ── Tender Analysis ──────────────────────────────── */
+
+async function startTenderAnalysis(){
+  const tenderChecks = document.querySelectorAll('.tender-check:checked');
+  if(tenderChecks.length === 0) return;
+  const tenderId = parseInt(tenderChecks[0].value);
+
+  const btn = document.getElementById('tenderAnalysisBtn');
+  const resultSection = document.getElementById('fileResultSection');
+  const stream = document.getElementById('fileStreamBox');
+
+  btn.disabled = true; btn.textContent = '⏳ 分析中...';
+  stream.classList.remove('hidden');
+  stream.innerHTML = '<span class="dot"></span> AI 正在分析招标文件...';
+  resultSection.innerHTML = '';
+
+  try {
+    const r = await fetch('/ai/analyze-tender',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({tender_doc_id:tenderId})
+    });
+
+    if(!r.ok){
+      const err = await r.text();
+      stream.innerHTML = '<span style="color:var(--danger)">❌ '+err+'</span>';
+      btn.disabled = false; btn.textContent = '📋 标前分析 — 三层分类';
+      return;
+    }
+
+    const data = await r.json();
+    stream.classList.add('hidden');
+
+    let html = `<div class="result-card">
+      <div class="score-big" style="font-size:24px">📋 ${data.total_count||0} 条招标要求</div>
+      <div class="score-summary">
+        <span>🔴 废标项: ${data.disqualification?.length||0}</span>
+        <span>🟡 重要: ${data.important?.length||0}</span>
+        <span>🟢 一般: ${data.general?.length||0}</span>
+      </div>
+    </div>`;
+
+    if(data.summary) html += `<div class="risk-box">📝 ${data.summary}</div>`;
+
+    if(data.disqualification?.length){
+      html += `<div class="action-section">
+        <div class="action-header">🔴 废标项 — 缺失即废标 (${data.disqualification.length}条)</div>`;
+      data.disqualification.forEach((item,i)=>{
+        html += `<div class="action-item" style="border-left:3px solid var(--danger)">
+          <div class="action-item-header">
+            <span class="action-num">#${i+1}</span>
+            <span class="tag tag-nc">🔴 废标</span>
+            <span class="action-req">${escHtml(item.text||'')}</span>
+          </div>
+          <div class="action-detail">
+            ${item.section?`<div style="color:var(--text-muted);font-size:12px">📂 ${escHtml(item.section)}</div>`:''}
+            ${item.reason?`<div class="action-reason">🔍 ${escHtml(item.reason)}</div>`:''}
+            ${item.risk?`<div class="action-suggestion" style="color:var(--danger)">⚠️ ${escHtml(item.risk)}</div>`:''}
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    if(data.important?.length){
+      html += `<div class="action-section">
+        <div class="action-header">🟡 重要条款 (${data.important.length}条)</div>`;
+      data.important.forEach((item,i)=>{
+        html += `<div class="action-item" style="border-left:3px solid var(--warn)">
+          <div class="action-item-header">
+            <span class="action-num">#${i+1}</span>
+            <span class="tag tag-partial">🟡 重要</span>
+            <span class="action-req">${escHtml(item.text||'')}</span>
+          </div>
+          <div class="action-detail">
+            ${item.section?`<div style="color:var(--text-muted);font-size:12px">📂 ${escHtml(item.section)}</div>`:''}
+            ${item.reason?`<div class="action-reason">🔍 ${escHtml(item.reason)}</div>`:''}
+            ${item.risk?`<div class="action-suggestion">⚠️ ${escHtml(item.risk)}</div>`:''}
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    if(data.general?.length){
+      html += `<div class="action-section">
+        <div class="action-header">🟢 一般条款 (${data.general.length}条)</div>`;
+      data.general.forEach((item,i)=>{
+        html += `<div class="verdict-item-compact">
+          <span class="tag tag-compliant">🟢 一般</span>
+          <span style="font-size:13px">${escHtml(item.text||'')}</span>
+          ${item.section?`<div style="color:var(--text-muted);font-size:12px;margin-left:60px">📂 ${escHtml(item.section)}</div>`:''}
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    resultSection.innerHTML = html;
+    btn.disabled = false; btn.textContent = '📋 标前分析 — 三层分类';
+
+  }catch(e){
+    stream.innerHTML = '<span style="color:var(--danger)">❌ 网络错误: '+e.message+'</span>';
+    btn.disabled = false; btn.textContent = '📋 标前分析 — 三层分类';
+  }
+}
+
+
+
+
+/* ── Streaming Compare Table ──────────────────────── */
+
+function initCompareTable(){
+  const container = document.getElementById('compareTableContainer');
+  const ctx = document.getElementById('compareProjectContext');
+
+  container.innerHTML = `<div class="stream-progress" id="streamProgress">
+    <span class="dot"><\/span> 逐条审查进行中... <span class="count" id="streamCount">0<\/span> 条已完成
+  <\/div>
+  <div style="overflow-x:auto">
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th class="col-num">#</th>
+        <th class="col-verdict">判定</th>
+        <th>权重</th>
+        <th class="col-req">招标文件要求</th>
+        <th class="col-bid">投标文件对照内容</th>
+        <th class="col-note">问题备注 / 整改建议</th>
+        <th class="col-action">操作</th>
+      <\/tr>
+    </thead>
+    <tbody id="compareTableBody"></tbody>
+  </table>
+  <\/div>`;
+
+  ctx.querySelector('.proj-empty').textContent = '正在逐条审查...';
+  switchPanel('compare');
+}
+
+let actionRowIdx = 0;
+
+function appendCompareRow(item, idx){
+  const tbody = document.getElementById('compareTableBody');
+  if(!tbody) return;
+  const countEl = document.getElementById('streamCount');
+  if(countEl) countEl.textContent = idx;
+
+  // Only show non-compliant and partial items (skip compliant/unable_to_judge)
+  const isNC = item.verdict === 'non_compliant' || item.verdict === 'noncompliant';
+  const isPartial = item.verdict === 'partial';
+  if(!isNC && !isPartial) return;
+
+  actionRowIdx++;
+  const weight = item.weight_level || 'amber';
+  const tagLabel = isNC ? '❌ 不合规' : '⚠️ 部分合规';
+  const gradeLabel = weight==='red'?'<span class="grade grade-red">🔴 关键废标项<\/span>':weight==='yellow'?'<span class="grade grade-yellow">🟡 重要资质项<\/span>':'<span class="grade grade-amber">🟠 一般技术项<\/span>';
+  const rowCls = `row-${weight}`;
+  const itemId = `row-${actionRowIdx}`;
+
+  const tr = document.createElement('tr');
+  tr.className = rowCls;
+  tr.id = itemId;
+  tr.innerHTML = `<td class="col-num">${actionRowIdx}<\/td>
+    <td class="col-verdict">${tagLabel}<\/td>
+    <td>${gradeLabel}<\/td>
+    <td class="col-req">${escHtml(item.requirement||'')}<\/td>
+    <td class="col-bid">${escHtml(item.bid_section_heading||'—')}<\/td>
+    <td class="col-note">${escHtml(item.suggestion||item.reason||'')}<\/td>
+    <td class="col-action">
+      <button class="btn-confirm" onclick="confirmItem(this, '${itemId}')" title="确认已处理">✔</button>
+      <button class="btn-ask" onclick="askAboutItem('${itemId}')" title="追问AI">💬</button>
+    <\/td>`;
+  itemDataMap[itemId] = {requirement: item.requirement||"", reason: item.reason||"", suggestion: item.suggestion||"", verdict: item.verdict||"", verdictLabel: isNC ? "不合规" : "部分合规"};
+  tbody.appendChild(tr);
+}
+
+function finalizeCompareTable(result){
+  const container = document.getElementById('compareTableContainer');
+  const ctx = document.getElementById('compareProjectContext');
+  const progress = document.getElementById('streamProgress');
+  if(progress) progress.innerHTML = `<span style="color:var(--success)">✅ 审查完成 · 共 ${result.total_items||0} 条 · 评分 ${result.overall_score||0}%<\/span>`;
+
+  ctx.querySelector('.proj-empty').textContent = `审查评分 ${result.overall_score||0}% · ${(result.non_compliant||0)+(result.partial||0)} 项需整改`;
+}
+
+let itemDataMap = {}; // store item data for追问
+
+function askAboutItem(rowId){
+  const item = itemDataMap[rowId];
+  if(!item) return;
+  if(chatCollapsed) toggleChat();
+  const q = `[${item.verdictLabel}] ${item.requirement}\n判定理由：${item.reason}\n请分析此项不合规的风险并提供具体修改方案。`;
+  document.getElementById('chatInput').value = q;
+  document.getElementById('chatInput').focus();
+  document.getElementById('chatInput').dispatchEvent(new Event('input'));
+}
+
+async function confirmItem(btn, rowId){
+  const row = document.getElementById(rowId);
+  if(!row) return;
+  try{await fetch('/ai/review/confirm',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({project_id:currentProjectId,requirement:'',verdict:'confirmed'})})}catch(e){}
+  row.classList.add('row-done');
+  btn.disabled = true;
+  btn.nextElementSibling.disabled = true;
+}
+
+async function ignoreItem(btn, rowId){
+  const row = document.getElementById(rowId);
+  if(!row) return;
+  try{await fetch('/ai/review/ignore',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({project_id:currentProjectId,requirement:'',verdict:'ignored'})})}catch(e){}
+  row.classList.add('row-done');
+  btn.disabled = true;
+  btn.previousElementSibling.disabled = true;
+}
+
+/* ── Result Rendering ─────────────────────────────── */
+function renderResultTo(data, container){
+  if(data.error){container.innerHTML=`<div style="color:var(--danger);padding:20px">${data.error}<\/div>`;return}
+  const score = data.overall_score||0;
+  const cls = score>=80?'good':score>=60?'warn':'bad';
+
+  // Separate items by verdict
+  const nc = [], partial = [], compliant = [], unknown = [];
+  if(data.items) data.items.forEach((item,i)=>{
+    item._idx = i+1;
+    const v = (item.verdict||'').replace(/_/g,'_');
+    if(v==='non_compliant'||v==='noncompliant') nc.push(item);
+    else if(v==='partial') partial.push(item);
+    else if(v==='compliant') compliant.push(item);
+    else unknown.push(item);
+  });
+
+  let html = '';
+
+  // ── Score card ──
+  html += `<div class="result-card">
+    <div class="score-big ${cls}">${score}%<\/div>
+    <div class="score-summary">
+      <span>✅ ${data.compliant||0} 合规<\/span>
+      <span>⚠️ ${data.partial||0} 部分合规<\/span>
+      <span>❌ ${data.non_compliant||0} 不合规<\/span>
+      <span>❓ ${data.unable_to_judge||0} 无法判断<\/span>
+    <\/div>
+  <\/div>`;
+
+  // ── Risk summary ──
+  if(data.risk_summary) html += `<div class="risk-box">⚠️ ${data.risk_summary}<\/div>`;
+
+  // ── Non-compliant / Partial : ACTION LIST (prominent) ──
+  const actionItems = [...nc, ...partial];
+  if(actionItems.length > 0){
+    html += `<div class="action-section">
+      <div class="action-header">🔴 需整改项 (${actionItems.length}) — 逐项查验更正<\/div>`;
+    actionItems.forEach(item => {
+      const isNC = item.verdict === 'non_compliant' || item.verdict === 'noncompliant';
+      const tagLabel = isNC ? '❌ 不合规' : '⚠️ 部分合规';
+      const tagCls = isNC ? 'tag-nc' : 'tag-partial';
+      html += `<div class="action-item">
+        <div class="action-item-header">
+          <span class="action-num">#${item._idx}<\/span>
+          <span class="tag ${tagCls}">${tagLabel}<\/span>
+          <span class="action-req">${item.requirement||''}<\/span>
+        <\/div>
+        ${item.bid_response?`<div class="action-bid">📝 ${item.bid_response}<\/div>`:''}
+        <div class="action-detail">
+          ${item.reason?`<div class="action-reason">🔍 ${item.reason}<\/div>`:''}
+          ${item.suggestion?`<div class="action-suggestion">💡 整改建议：${item.suggestion}<\/div>`:''}
+        <\/div>
+      <\/div>`;
+    });
+    html += `<\/div>`;
+  }
+
+  // ── Compliant items (collapsed) ──
+  if(compliant.length > 0 || unknown.length > 0){
+    html += `<div class="collapsible-section" style="margin-top:16px">
+      <button class="collapsible-toggle" onclick="this.nextElementSibling.classList.toggle('open')">
+        ✅ 合规项 (${compliant.length}) ${unknown.length?' · ❓ 无法判断 ('+unknown.length+')':''}
+      </button>
+      <div class="collapsible-content">`;
+    [...compliant, ...unknown].forEach(item => {
+      const tagCls = item.verdict==='compliant' ? 'tag-compliant' : 'tag-unable_to_judge';
+      html += `<div class="verdict-item-compact">
+        <span class="tag ${tagCls}">${verdictLabel(item.verdict)}<\/span>
+        <span style="font-size:13px">${item.requirement||''}<\/span>
+        ${item.reason?`<div style="color:var(--text-muted);font-size:12px;margin-left:60px">${item.reason}<\/div>`:''}
+      <\/div>`;
+    });
+    html += `<\/div><\/div>`;
+  }
+
+  // ── Suggestions list ──
+  if(data.suggestions&&data.suggestions.length){
+    html += `<div class="suggestions-box">${data.suggestions.map(s=>`<div>💡 ${s}<\/div>`).join('')}<\/div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function verdictLabel(v){
+  const m={compliant:'✅ 合规',partial:'⚠️ 部分合规',non_compliant:'❌ 不合规',noncompliant:'❌ 不合规',unable_to_judge:'❓ 无法判断'};
+  return m[v]||v;
+}
+
+/* ── Comparison Table ─────────────────────────────── */
+function buildCompareTable(){
+  const container = document.getElementById('compareTableContainer');
+  const ctx = document.getElementById('compareProjectContext');
+
+  if(!lastReviewResult || !lastReviewResult.items || lastReviewResult.items.length === 0){
+    container.innerHTML = `<div style="text-align:center;padding:48px;color:var(--text-muted)">
+      <div style="font-size:40px;margin-bottom:12px;opacity:.4">📋<\/div>
+      <p>完成文件审查后，不合规/部分合规项将在此以对照表形式展示<\/p>
+    <\/div>`;
+    // Update context bar
+    ctx.querySelector('.proj-empty').textContent = '请先完成文件审查';
+    return;
+  }
+
+  // Filter non-compliant and partial items
+  const actionItems = lastReviewResult.items.filter(item => {
+    const v = item.verdict || '';
+    return v === 'non_compliant' || v === 'noncompliant' || v === 'partial';
+  });
+
+  if(actionItems.length === 0){
+    container.innerHTML = `<div style="text-align:center;padding:48px;color:var(--success)">
+      <div style="font-size:40px;margin-bottom:12px">✅<\/div>
+      <p>全部合规！无需整改项<\/p>
+    <\/div>`;
+    ctx.querySelector('.proj-empty').textContent = '全部合规';
+    return;
+  }
+
+  // Update context bar
+  const ctxDisplay = ctx.querySelector('.proj-name-display');
+  const ctxEmpty = ctx.querySelector('.proj-empty');
+  if(ctxDisplay){
+    ctxDisplay.textContent = `审查评分 ${lastReviewResult.overall_score||0}% · ${actionItems.length} 项需整改`;
+  }else if(ctxEmpty){
+    ctxEmpty.textContent = `审查评分 ${lastReviewResult.overall_score||0}% · ${actionItems.length} 项需整改`;
+  }
+
+  // Build table
+  let html = `<div style="overflow-x:auto">
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th class="col-num">#</th>
+        <th class="col-verdict">判定</th>
+        <th>权重</th>
+        <th class="col-req">招标文件要求</th>
+        <th class="col-page">页码</th>
+        <th class="col-bid">投标文件对照内容</th>
+        <th class="col-page">页码</th>
+        <th class="col-note">问题备注 / 整改建议</th>
+        <th style="width:100px">操作</th>
+      <\/tr>
+    </thead>
+    <tbody>`;
+
+  actionItems.forEach((item, idx) => {
+    const isNC = item.verdict === 'non_compliant' || item.verdict === 'noncompliant';
+    const weight = item.weight_level || 'amber';
+    const rowCls = `row-${weight}`;
+    const tagLabel = isNC ? '❌ 不合规' : '⚠️ 部分合规';
+    const tenderPage = item.tender_page || '—';
+    const bidPage = item.bid_page || '—';
+    const weightLabel = weight==='red'?'🔴 关键':weight==='yellow'?'🟡 重要':'🟠 一般';
+    const weightCls = `weight-${weight}`;
+
+    const itemJson = JSON.stringify({
+      project_id: currentProjectId,
+      requirement: item.requirement,
+      bid_response: item.bid_response||'',
+      verdict: item.verdict,
+      weight_level: weight,
+      tender_page: item.tender_page||0,
+      bid_page: item.bid_page||0,
+      reason: item.reason||'',
+      suggestion: item.suggestion||'',
+    }).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+    html += `<tr class="${rowCls}" id="compare-row-${idx}">
+      <td class="col-num">${idx+1}<\/td>
+      <td class="col-verdict"><span class="tag ${isNC?'tag-nc':'tag-partial'}">${tagLabel}<\/span><\/td>
+      <td><span class="weight-badge ${weightCls}">${weightLabel}<\/span><\/td>
+      <td class="col-req">${escHtml(item.requirement||'')}<\/td>
+      <td class="col-page">P${tenderPage}<\/td>
+      <td class="col-bid">${escHtml(item.bid_response||'')}<\/td>
+      <td class="col-page">P${bidPage}<\/td>
+      <td class="col-note">
+        ${item.reason?`<div style="color:var(--text-secondary);margin-bottom:4px">🔍 ${escHtml(item.reason)}<\/div>`:''}
+        ${item.suggestion?`<div style="color:var(--warn);font-size:12px">💡 ${escHtml(item.suggestion)}<\/div>`:''}
+      <\/td>
+      <td>
+        <button class="btn-action btn-confirm" onclick="confirmItem('${itemJson}', ${idx})" title="确认已处理">✅</button>
+        <button class="btn-action btn-ignore" onclick="ignoreItem('${itemJson}', ${idx})" title="忽略此项">👁️</button>
+      <\/td>
+    <\/tr>`;
+  });
+
+  html += `</tbody></table><\/div>`;
+  container.innerHTML = html;
+}
+
+/* ── AI Chat Session ────────────────────────────────── */
+function syncResultToChat(data){
+  if(chatCollapsed) toggleChat();
+  const msgs = document.getElementById('chatMessages');
+  const empty = document.getElementById('chatEmpty');
+  if(empty) empty.remove();
+
+  const summary = `审查完成：综合评分 ${data.overall_score||0}%，${data.compliant||0}项合规 / ${data.non_compliant||0}项不合规。`;
+  let detail = '';
+  if(data.items) data.items.forEach((item,i)=>{
+    detail += `\n${i+1}. ${item.requirement} → ${verdictLabel(item.verdict)}`;
+    if(item.reason) detail += ` (${item.reason})`;
+  });
+
+  addChatMsg('ai', summary + detail);
+
+  setTimeout(()=>{
+    addChatMsg('ai','💡 你可以继续追问：\n• "总结风险点"\n• "给整改建议"\n• "详细分析第X项"\n• "对比各条款合规情况"');
+  },500);
+}
+
+function addChatMsg(role,text){
+  resetCollapseTimer();
+  const msgs = document.getElementById('chatMessages');
+  const empty = document.getElementById('chatEmpty');
+  if(empty) empty.remove();
+
+  const now = new Date();
+  const time = now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+
+  const div = document.createElement('div');
+  div.className = 'chat-msg '+role;
+  div.innerHTML = text.replace(/\n/g,'<br>') + `<div class="time">${time}<\/div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function sendChat(){
+  if(chatCollapsed) toggleChat();
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if(!text) return;
+
+  addChatMsg('user',text);
+  input.value='';
+
+  const btn = document.getElementById('chatSendBtn');
+  btn.disabled = true;
+
+  // Show typing indicator
+  const typingId = 'typing_' + Date.now();
+  const msgs = document.getElementById('chatMessages');
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'chat-msg ai';
+  typingDiv.id = typingId;
+  typingDiv.innerHTML = '<span class=\"dot\"><\/span> AI 思考中...';
+  msgs.appendChild(typingDiv);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  try {
+    const body = { message: text };
+    if(lastReviewResult) body.review_context = lastReviewResult;
+
+    const r = await fetch('/ai/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify(body)
+    });
+
+    // Remove typing indicator
+    const typing = document.getElementById(typingId);
+    if(typing) typing.remove();
+
+    if(!r.ok){
+      addChatMsg('ai','⚠️ AI 响应失败');
+      btn.disabled = false;
+      return;
+    }
+
+    const data = await r.json();
+    addChatMsg('ai', data.reply || '（AI 未返回内容）');
+  }catch(e){
+    const typing = document.getElementById(typingId);
+    if(typing) typing.remove();
+    addChatMsg('ai','⚠️ 网络错误: '+e.message);
+  }
+  btn.disabled = false;
+}
+
+/* ── Chat Panel Toggle ─────────────────────────────── */
+let chatCollapsed = false;
+let collapseTimer = null;
+const COLLAPSE_DELAY = 60000;
+
+function toggleChat(){
+  const panel = document.querySelector('.right-panel');
+  chatCollapsed = !chatCollapsed;
+  if(chatCollapsed){
+    panel.classList.add('collapsed');
+    document.querySelector('.chat-toggle').textContent = '▶';
+    document.querySelector('.chat-toggle').title = '展开面板';
+    clearTimeout(collapseTimer);
+  } else {
+    panel.classList.remove('collapsed');
+    document.querySelector('.chat-toggle').textContent = '◀';
+    document.querySelector('.chat-toggle').title = '收起面板';
+    resetCollapseTimer();
+    const msgs = document.getElementById('chatMessages');
+    if(msgs) msgs.scrollTop = msgs.scrollHeight;
+  }
+}
+
+function resetCollapseTimer(){
+  clearTimeout(collapseTimer);
+  if(!chatCollapsed){
+    collapseTimer = setTimeout(() => {
+      if(!chatCollapsed) toggleChat();
+    }, COLLAPSE_DELAY);
+  }
+}
+
+function sendQuick(text){
+  if(chatCollapsed) toggleChat();
+  document.getElementById('chatInput').value = text;
+  sendChat();
+}
+
+/* ── Admin Panel ────────────────────────────────────── */
+let adminSubTab = 'users';
+
+function switchAdminSub(name){
+  adminSubTab = name;
+  document.querySelectorAll('.admin-sub-tab').forEach(b=>b.classList.toggle('active',b.textContent.includes(name==='users'?'用户':name==='config'?'配置':name==='data'?'迁移':'知识')));
+  document.getElementById('adminUsersPanel').classList.toggle('hidden',name!=='users');
+  document.getElementById('adminConfigPanel').classList.toggle('hidden',name!=='config');
+  document.getElementById('adminDataPanel').classList.toggle('hidden',name!=='data');
+  document.getElementById('adminKbPanel').classList.toggle('hidden',name!=='kb');
+  if(name==='users') loadAdminUsers();
+  if(name==='config') loadAdminConfig();
+  if(name==='kb') loadKbDocs();
+}
+
+async function loadAdminUsers(){
+  try{
+    const r=await fetch('/admin/users',{headers:{'Authorization':'Bearer '+token}});
+    if(!r.ok) return;
+    const d=await r.json();
+    const tbody=document.getElementById('adminUserTbody');
+    tbody.innerHTML=d.users.map(u=>`<tr>
+      <td>${escHtml(u.username)}<\/td>
+      <td>${u.role==='admin'?'管理员':u.role==='reviewer'?'审核员':u.role==='bid_editor'?'投标书编辑':'观察员'}<\/td>
+      <td>${u.created_at?u.created_at.slice(0,10):'—'}<\/td>
+      <td>
+        <button class="chat-quick" onclick="showResetPwdDialog(${u.id},'${escHtml(u.username)}')" style="margin-right:4px">🔑 重置密码</button>
+        ${u.role!=='admin'?`<button class="chat-quick" onclick="confirmDeleteUser(${u.id},'${escHtml(u.username)}')" style="color:#dc2626;border-color:#dc2626">🗑 删除</button>`:''}
+      <\/td>
+    <\/tr>`).join('');
+  }catch(e){}
+}
+
+function showAddUserDialog(){
+  document.getElementById('addUserDialog').classList.remove('hidden');
+  document.getElementById('newUsername').value='';
+  document.getElementById('newPassword').value='';
+  document.getElementById('newRole').value='bid_editor';
+  document.getElementById('newAdminPwd').value='';
+}
+
+function closeAddUserDialog(){
+  document.getElementById('addUserDialog').classList.add('hidden');
+}
+
+async function submitAddUser(){
+  const u=document.getElementById('newUsername').value.trim();
+  const p=document.getElementById('newPassword').value;
+  const r=document.getElementById('newRole').value;
+  const adminPwd=document.getElementById('newAdminPwd').value;
+  if(!u||u.length<2) return alert('用户名至少2字符');
+  if(!p||p.length<6) return alert('密码至少6位');
+  if(!adminPwd) return alert('请输入管理员密码');
+  closeAddUserDialog();
+  addAdminUser(u,p,r,adminPwd);
+}
+
+async function addAdminUser(username,password,role,adminPwd){
+  try{
+    // Verify admin password first
+    const v=await fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser,password:adminPwd})});
+    if(!v.ok) return alert('管理员密码验证失败');
+    const r=await fetch('/admin/users',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({username,password,role})});
+    if(!r.ok){const e=await r.json();return alert(e.detail||'创建失败')}
+    loadAdminUsers();
+  }catch(e){alert('操作失败: '+e.message)}
+}
+
+function showResetPwdDialog(uid,uname){
+  const p=prompt(`为「${uname}」设置新密码（至少6位）：`);
+  if(!p||p.length<6) return alert('密码至少6位');
+  const confirmPwd=prompt('请输入管理员密码确认操作：');
+  if(!confirmPwd) return;
+  resetUserPassword(uid,uname,p,confirmPwd);
+}
+
+async function resetUserPassword(uid,uname,newPwd,adminPwd){
+  try{
+    const v=await fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser,password:adminPwd})});
+    if(!v.ok) return alert('管理员密码验证失败');
+    const r=await fetch('/admin/users/'+uid+'/password',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({password:newPwd})});
+    if(!r.ok){const e=await r.json();return alert(e.detail||'重置失败')}
+    alert('密码已重置');
+  }catch(e){alert('操作失败: '+e.message)}
+}
+
+function confirmDeleteUser(uid,uname){
+  if(!confirm(`确认删除用户「${uname}」？此操作不可撤销。`)) return;
+  const adminPwd=prompt('请输入管理员密码确认删除：');
+  if(!adminPwd) return;
+  deleteUser(uid,uname,adminPwd);
+}
+
+async function deleteUser(uid,uname,adminPwd){
+  try{
+    const v=await fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser,password:adminPwd})});
+    if(!v.ok) return alert('管理员密码验证失败');
+    const r=await fetch('/admin/users/'+uid,{method:'DELETE',headers:{'Authorization':'Bearer '+token}});
+    if(!r.ok){const e=await r.json();return alert(e.detail||'删除失败')}
+    alert('用户已删除');
+    loadAdminUsers();
+  }catch(e){alert('操作失败: '+e.message)}
+}
+
+async function loadAdminConfig(){
+  try{
+    const r=await fetch('/auth/me',{headers:{'Authorization':'Bearer '+token}});
+    if(!r.ok) return;
+    document.getElementById('cfgBaseUrl').value='https://api.deepseek.com';
+    document.getElementById('cfgModel').value='deepseek-chat';
+    document.getElementById('cfgMaxUpload').value='250';
+  }catch(e){}
+}
+
+async function saveConfig(){
+  alert('配置修改需要直接编辑服务器上的 .env 文件。\n请通过管理后台告知管理员需要修改的配置项。');
+}
+
+async function exportData(){
+  try{
+    document.getElementById('exportStatus').textContent='正在导出...';
+    const r=await fetch('/admin/data/export',{method:'POST',headers:{'Authorization':'Bearer '+token}});
+    if(!r.ok){document.getElementById('exportStatus').textContent='导出失败';return}
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='bidsmart_export.tar.gz';
+    a.click();
+    URL.revokeObjectURL(url);
+    document.getElementById('exportStatus').textContent='✅ 导出成功';
+  }catch(e){document.getElementById('exportStatus').textContent='导出失败: '+e.message}
+}
+
+async function importData(){
+  const file=document.getElementById('importFileInput').files[0];
+  if(!file) return alert('请先选择 .tar.gz 文件');
+  document.getElementById('importStatus').textContent='正在导入...';
+  try{
+    const fd=new FormData();
+    fd.append('file',file);
+    const r=await fetch('/admin/data/import',{method:'POST',headers:{'Authorization':'Bearer '+token},body:fd});
+    if(!r.ok){const e=await r.json();document.getElementById('importStatus').textContent='导入失败: '+(e.detail||'');return}
+    const d=await r.json();
+    document.getElementById('importStatus').textContent='✅ '+d.message;
+  }catch(e){document.getElementById('importStatus').textContent='导入失败: '+e.message}
+}
+
+/* ── Knowledge Base ──────────────────────────────────── */
+async function loadKbDocs(){
+  try{
+    const r=await fetch('/admin/kb/documents',{headers:{'Authorization':'Bearer '+token}});
+    if(!r.ok) return;
+    const d=await r.json();
+    const tbody=document.getElementById('kbDocTbody');
+    if(!d.documents||d.documents.length===0){
+      tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">暂无文档，请上传<\/td><\/tr>';
+      return;
+    }
+    const types={law:'法律法规',regulation:'规章制度',experience:'经验文章',manual:'其他'};
+    tbody.innerHTML=d.documents.map(doc=>`<tr>
+      <td>${escHtml(doc.title)}<\/td>
+      <td>${types[doc.source_type]||doc.source_type}<\/td>
+      <td>${doc.chunk_count}<\/td>
+      <td>${doc.created_at?doc.created_at.slice(0,10):'—'}<\/td>
+      <td><button class="chat-quick" onclick="deleteKbDoc(${doc.id},'${escHtml(doc.title)}')" style="color:#dc2626;border-color:#dc2626">🗑 删除</button><\/td>
+    <\/tr>`).join('');
+  }catch(e){}
+}
+
+async function uploadKbDoc(){
+  const title=document.getElementById('kbTitle').value.trim();
+  const sourceType=document.getElementById('kbSourceType').value;
+  const file=document.getElementById('kbFileInput').files[0];
+  if(!file) return alert('请选择文件');
+  const status=document.getElementById('kbUploadStatus');
+  status.textContent='正在上传并处理...';
+  try{
+    const fd=new FormData();
+    fd.append('file',file);
+    fd.append('title',title||file.name);
+    fd.append('source_type',sourceType);
+    const r=await fetch('/admin/kb/upload',{method:'POST',headers:{'Authorization':'Bearer '+token},body:fd});
+    if(!r.ok){const e=await r.json();status.textContent='上传失败: '+(e.detail||'');return}
+    const d=await r.json();
+    status.textContent=`✅ 上传成功！「${d.title}」共 ${d.chunk_count} 个分块`;
+    document.getElementById('kbTitle').value='';
+    document.getElementById('kbFileInput').value='';
+    loadKbDocs();
+  }catch(e){status.textContent='上传失败: '+e.message}
+}
+
+async function deleteKbDoc(id,title){
+  if(!confirm(`确认删除「${title}」？将同时删除所有分块和文件。`)) return;
+  try{
+    const r=await fetch('/admin/kb/documents/'+id,{method:'DELETE',headers:{'Authorization':'Bearer '+token}});
+    if(!r.ok) return alert('删除失败');
+    loadKbDocs();
+  }catch(e){alert('删除失败: '+e.message)}
+}
+
+async function searchKB(){
+  const q=document.getElementById('kbSearchInput').value.trim();
+  if(!q) return;
+  const results=document.getElementById('kbSearchResults');
+  const content=document.getElementById('kbSearchContent');
+  results.classList.remove('hidden');
+  content.innerHTML='<p style="color:var(--text-muted)">搜索中...<\/p>';
+  try{
+    const r=await fetch('/admin/kb/search',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({query:q,top_k:5})});
+    if(!r.ok){content.innerHTML='<p style="color:#dc2626">搜索失败<\/p>';return}
+    const d=await r.json();
+    if(!d.results||d.results.length===0){
+      content.innerHTML='<p style="color:var(--text-muted)">未找到相关内容<\/p>';
+      return;
+    }
+    content.innerHTML=d.results.map((r,i)=>`<div style="margin-bottom:12px;padding:12px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius);font-size:13px">
+      <div style="color:var(--accent);margin-bottom:4px">📄 ${escHtml(r.title||'未知文档')} · 相似度 ${(r.score*100).toFixed(0)}%<\/div>
+      <div style="color:var(--text-secondary)">${escHtml(r.heading||'')}<\/div>
+      <div style="color:var(--text-primary);margin-top:4px;line-height:1.6">${escHtml(r.content.substring(0,300))}<\/div>
+    <\/div>`).join('');
+  }catch(e){content.innerHTML='<p style="color:#dc2626">搜索出错: '+e.message}
+}
+
+/* ── Init ──────────────────────────────────────────── */
+(function(){
+  const inp = document.getElementById('chatInput');
+  if(inp){
+    inp.addEventListener('focus', ()=>{
+      if(chatCollapsed) toggleChat();
+      resetCollapseTimer();
+    });
+    inp.addEventListener('input', ()=> resetCollapseTimer());
+  }
+  resetCollapseTimer();
+})();
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter' && document.activeElement === document.getElementById('loginPass')){
+    login();
+  }
+  if(e.key==='Enter' && document.activeElement === document.getElementById('chatInput')){
+    e.preventDefault();
+    sendChat();
+  }
+});
+</script>
+</body>
+</html>

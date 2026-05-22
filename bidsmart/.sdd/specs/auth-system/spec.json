@@ -1,0 +1,61 @@
+{
+  "spec_id": "auth-system",
+  "name": "Authentication & Authorization System",
+  "version": "0.7.7",
+  "status": "implemented",
+  "module_path": "src/platform/auth/",
+  "created": "2026-05-01",
+  "updated": "2026-05-01",
+  "description": "JWT Bearer authentication with bcrypt password hashing and role-based access control (RBAC). Supports user registration, token-pair login, refresh token rotation, first-login password enforcement, and admin/reviewer/viewer/bid_editor role hierarchy.",
+  "features": [
+    {
+      "id": "FR-1",
+      "name": "User Registration",
+      "status": "done",
+      "file": "src/platform/auth/service.py"
+    },
+    {
+      "id": "FR-2",
+      "name": "JWT Login with Access/Refresh Tokens",
+      "status": "done",
+      "file": "src/platform/auth/service.py"
+    },
+    {
+      "id": "FR-3",
+      "name": "Token Refresh",
+      "status": "done",
+      "file": "src/platform/auth/service.py"
+    },
+    {
+      "id": "FR-4",
+      "name": "RBAC Role Enforcement",
+      "status": "done",
+      "file": "src/dependencies.py"
+    },
+    {
+      "id": "FR-5",
+      "name": "Password Change (First-Login Enforcement)",
+      "status": "done",
+      "file": "src/platform/auth/service.py"
+    },
+    {
+      "id": "FR-6",
+      "name": "Current User Endpoint",
+      "status": "done",
+      "file": "src/platform/auth/router.py"
+    }
+  ],
+  "dependencies": {
+    "python": ["bcrypt", "python-jose[cryptography]", "fastapi", "pydantic"],
+    "internal": ["src.models.user.User", "src.db.session.get_db", "src.config.Settings"]
+  },
+  "files": [
+    "src/platform/auth/__init__.py",
+    "src/platform/auth/service.py",
+    "src/platform/auth/router.py",
+    "src/platform/auth/schemas.py",
+    "src/dependencies.py",
+    "src/models/user.py",
+    "src/config.py"
+  ]
+}
