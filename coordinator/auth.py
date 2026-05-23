@@ -1,4 +1,5 @@
 """JWT authentication and RBAC authorization."""
+
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
@@ -19,9 +20,12 @@ def create_token(user_id: str, role: str = "viewer") -> str:
         "sub": user_id,
         "role": role,
         "iat": datetime.now(timezone.utc),
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes),
+        "exp": datetime.now(timezone.utc)
+        + timedelta(minutes=settings.jwt_expire_minutes),
     }
-    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    return jwt.encode(
+        payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+    )
 
 
 def decode_token(token: str) -> dict:
@@ -34,9 +38,13 @@ def decode_token(token: str) -> dict:
         )
         return payload
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired"
+        )
     except jwt.InvalidTokenError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
 
 
 async def get_current_user(
@@ -44,7 +52,9 @@ async def get_current_user(
 ) -> dict:
     """FastAPI dependency: extract authenticated user from Bearer token."""
     if credentials is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token"
+        )
     return decode_token(credentials.credentials)
 
 

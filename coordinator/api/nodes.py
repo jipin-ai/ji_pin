@@ -1,16 +1,16 @@
 """Node lifecycle — register, heartbeat, deregister."""
+
 from sqlalchemy import select, update
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-from auth import get_current_user, require_role
+from auth import require_role
 from cache import (
-    get_redis, record_heartbeat, get_heartbeat_state,
-    set_node_online, set_node_offline,
+    record_heartbeat,
+    set_node_online,
+    set_node_offline,
 )
-from certs import issue_cert, verify_cert
-from config import settings
-from db.engine import get_db
+from certs import issue_cert
 from db.models import Node
 
 router = APIRouter(prefix="/api/v1/nodes", tags=["nodes"])
@@ -42,7 +42,6 @@ async def register_node(body: RegisterRequest):
         org_name=body.org_name,
         status="PENDING",
     )
-    import asyncio as _a
     from db.engine import AsyncSessionLocal
 
     async with AsyncSessionLocal() as session:
@@ -61,6 +60,7 @@ async def register_node(body: RegisterRequest):
 
     # Issue JWT for the node
     from auth import create_token
+
     token = create_token(user_id=node.node_id, role="operator")
 
     return RegisterResponse(node_id=node.node_id, token=token)
@@ -77,7 +77,6 @@ class HeartbeatRequest(BaseModel):
 @router.post("/{node_id}/heartbeat")
 async def node_heartbeat(node_id: str, body: HeartbeatRequest):
     """Receive heartbeat from a gateway node."""
-    import asyncio as _a
     from datetime import datetime, timezone
     from db.engine import AsyncSessionLocal
 
@@ -114,7 +113,6 @@ async def deregister_node(
     user: dict = Depends(require_role("admin", "operator")),
 ):
     """Deregister a node. Only admin/operator can do this."""
-    import asyncio as _a
     from db.engine import AsyncSessionLocal
 
     async with AsyncSessionLocal() as session:
@@ -126,7 +124,9 @@ async def deregister_node(
         await session.commit()
 
         if result.rowcount == 0:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Node not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Node not found"
+            )
 
     await set_node_offline(node_id)
     return {"status": "deregistered"}

@@ -1,4 +1,5 @@
 """Alembic async migration environment."""
+
 import asyncio
 import sys
 from pathlib import Path

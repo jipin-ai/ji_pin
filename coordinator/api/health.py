@@ -1,4 +1,5 @@
 """Health check and Prometheus metrics."""
+
 from fastapi import APIRouter
 from sqlalchemy import text
 

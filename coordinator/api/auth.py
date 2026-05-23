@@ -1,4 +1,5 @@
 """POST /api/v1/auth/login — JWT token issuance."""
+
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 

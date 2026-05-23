@@ -3,11 +3,12 @@
 All tables are prefixed with 'tr_' to coexist with other applications
 sharing the same PostgreSQL database.
 """
+
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.engine import Base
@@ -39,9 +40,7 @@ class Node(Base):
         String(2), default="L0", nullable=False
     )  # L0 | L1 | L2
     max_concurrent_tasks: Mapped[int] = mapped_column(Integer, default=3)
-    heartbeat_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     config: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
@@ -78,9 +77,7 @@ class Task(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     steps: Mapped[list["TaskStep"]] = relationship(
         "TaskStep", back_populates="task", cascade="all, delete-orphan"
@@ -116,9 +113,7 @@ class TaskStep(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     task: Mapped["Task"] = relationship("Task", back_populates="steps")
 
@@ -128,9 +123,7 @@ class AuditLog(Base):
 
     __tablename__ = "tr_audit_logs"
 
-    log_id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=_new_uuid
-    )
+    log_id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_new_uuid)
     timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )

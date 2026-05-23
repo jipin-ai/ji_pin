@@ -3,8 +3,8 @@
 Used during dev instead of Alembic (shared DB with mixing-console
 prevents clean alembic chain).
 """
+
 import asyncio
-import sys
 
 from db.engine import engine, Base
 import db.models  # noqa: F401 — register all models

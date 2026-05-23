@@ -1,4 +1,5 @@
 """Coordinator node configuration via Pydantic Settings."""
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,7 +16,9 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # Database — reuse existing PostgreSQL with table prefix isolation
-    database_url: str = "postgresql+asyncpg://mixing:mixing_dev@localhost:5432/mixing_console"
+    database_url: str = (
+        "postgresql+asyncpg://mixing:mixing_dev@localhost:5432/mixing_console"
+    )
     database_table_prefix: str = "tr_"  # tongrui namespace
     database_pool_size: int = 20
     database_max_overflow: int = 10

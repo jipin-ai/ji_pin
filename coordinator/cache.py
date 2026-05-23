@@ -1,6 +1,6 @@
 """Redis integration — task queue, result cache, heartbeat state."""
+
 import json
-from typing import Any
 
 import redis.asyncio as aioredis
 
