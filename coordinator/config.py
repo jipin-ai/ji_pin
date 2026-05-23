@@ -11,10 +11,12 @@ class Settings(BaseSettings):
 
     # App
     app_name: str = "Tongrui AI Secure Gateway"
+    app_port: int = 8001
     debug: bool = False
 
-    # Database
-    database_url: str = "postgresql+asyncpg://tongrui:tongrui_dev@localhost:5432/tongrui"
+    # Database — reuse existing PostgreSQL with table prefix isolation
+    database_url: str = "postgresql+asyncpg://mixing:mixing_dev@localhost:5432/mixing_console"
+    database_table_prefix: str = "tr_"  # tongrui namespace
     database_pool_size: int = 20
     database_max_overflow: int = 10
 
