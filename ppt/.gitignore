@@ -1,0 +1,5 @@
+# AI Security Gateway - ppt gen
+node_modules/
+*.pdf
+qa_investor/
+qa_technical/
