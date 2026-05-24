@@ -1,6 +1,0 @@
-# Generated certificates — keep CA in repo, test certs out
-*.key
-*.srl
-*.crl
-!ca.key
-!coordinator.key
