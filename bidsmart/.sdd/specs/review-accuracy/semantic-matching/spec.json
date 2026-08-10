@@ -1,8 +1,0 @@
-{
-  "name": "semantic-matching",
-  "version": "0.1.0",
-  "phase": "spec",
-  "parent": "review-accuracy",
-  "dependencies": [],
-  "created": "2026-05-03"
-}
