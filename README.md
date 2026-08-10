@@ -11,7 +11,7 @@
 <br>
 
 <p align="center">
-  <a href="mailto:yining@ctgc.com.cn"><img src="https://img.shields.io/badge/email-yining%40ctgc.com.cn-blue?style=flat-square" alt="Email"></a>
+  <a href="mailto:shihetongtai@gmail.com"><img src="https://img.shields.io/badge/email-yining%40ctgc.com.cn-blue?style=flat-square" alt="Email"></a>
   <a href="https://github.com/jipin-ai"><img src="https://img.shields.io/badge/github-jipin--ai-181717?style=flat-square&logo=github" alt="GitHub"></a>
   <img src="https://img.shields.io/badge/location-Beijing-555?style=flat-square" alt="Beijing">
 </p>
@@ -67,7 +67,7 @@ cron > 常驻进程
 ### 联系
 
 <p>
-  <a href="mailto:yining@ctgc.com.cn">yining@ctgc.com.cn</a>
+  <a href="mailto:shihetongtai@gmail.com">shihetongtai@gmail.com</a>
 </p>
 
 <br>
